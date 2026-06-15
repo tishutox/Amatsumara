@@ -83,6 +83,40 @@
       font-size: 0.95rem;
       color: var(--muted);
     }
+
+    .panel {
+      margin-top: 18px;
+      border: 1px solid #dbe8e3;
+      border-radius: 14px;
+      padding: 14px;
+      background: #fbfdfc;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+    }
+
+    .facts {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 0.95rem;
+      display: grid;
+      gap: 6px;
+    }
+
+    .facts strong {
+      color: var(--ink);
+    }
+
+    .changelog {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -97,6 +131,24 @@
     </a>
 
     <p class="meta">Datei: friendship-android-v1.apk</p>
+
+    <section class="panel" aria-label="Version">
+      <h2>Version</h2>
+      <ul class="facts">
+        <li><strong>Release:</strong> v1.0.0</li>
+        <li><strong>Dateigroesse:</strong> 42.9 MB</li>
+        <li><strong>Build-Zeit:</strong> 2026-06-15 22:52</li>
+      </ul>
+    </section>
+
+    <section class="panel" aria-label="Changelog">
+      <h2>Changelog</h2>
+      <ul class="changelog">
+        <li>Neues App-Grundgeruest fuer Android, iOS und Desktop.</li>
+        <li>Responsive Navigation mit Discover, Communities, Chats und Me.</li>
+        <li>Remixicon v4.9.1 Icons fuer aktive und inaktive Tabs.</li>
+      </ul>
+    </section>
   </main>
 </body>
 </html>
