@@ -5,7 +5,7 @@ void main() {
   testWidgets('renders app shell and home content', (WidgetTester tester) async {
     await tester.pumpWidget(const FriendshipApp());
 
-    expect(find.text('Start'), findsAtLeastNWidgets(1));
+    expect(find.text('Discover'), findsAtLeastNWidgets(1));
     expect(find.text('Willkommen bei Friendship'), findsOneWidget);
   });
 }

@@ -1,8 +1,10 @@
 import 'package:friendship/core/responsive/breakpoints.dart';
+import 'package:friendship/features/chats/presentation/chats_page.dart';
 import 'package:friendship/features/communities/presentation/communities_page.dart';
 import 'package:friendship/features/home/presentation/home_page.dart';
-import 'package:friendship/features/profile/presentation/profile_page.dart';
+import 'package:friendship/features/me/presentation/me_page.dart';
 import 'package:flutter/material.dart';
+import 'package:remixicon/remixicon.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -14,12 +16,13 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
 
-  static const _titles = ['Start', 'Communities', 'Profil'];
+  static const _titles = ['Discover', 'Communities', 'Chats', 'Me'];
 
   static const _pages = [
     HomePage(),
     CommunitiesPage(),
-    ProfilePage(),
+    ChatsPage(),
+    MePage(),
   ];
 
   @override
@@ -41,19 +44,24 @@ class _AppShellState extends State<AppShell> {
               },
               destinations: const [
                 NavigationRailDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
-                  label: Text('Start'),
+                  icon: Icon(Remix.compass_line),
+                  selectedIcon: Icon(Remix.compass_fill),
+                  label: Text('Discover'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.groups_outlined),
-                  selectedIcon: Icon(Icons.groups),
+                  icon: Icon(Remix.collage_line),
+                  selectedIcon: Icon(Remix.collage_fill),
                   label: Text('Communities'),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: Text('Profil'),
+                  icon: Icon(Remix.chat_1_line),
+                  selectedIcon: Icon(Remix.chat_1_fill),
+                  label: Text('Chats'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Remix.user_line),
+                  selectedIcon: Icon(Remix.user_fill),
+                  label: Text('Me'),
                 ),
               ],
             ),
@@ -76,19 +84,24 @@ class _AppShellState extends State<AppShell> {
               },
               destinations: const [
                 NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
-                  label: 'Start',
+                  icon: Icon(Remix.compass_line),
+                  selectedIcon: Icon(Remix.compass_fill),
+                  label: 'Discover',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.groups_outlined),
-                  selectedIcon: Icon(Icons.groups),
+                  icon: Icon(Remix.collage_line),
+                  selectedIcon: Icon(Remix.collage_fill),
                   label: 'Communities',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: 'Profil',
+                  icon: Icon(Remix.chat_1_line),
+                  selectedIcon: Icon(Remix.chat_1_fill),
+                  label: 'Chats',
+                ),
+                NavigationDestination(
+                  icon: Icon(Remix.user_line),
+                  selectedIcon: Icon(Remix.user_fill),
+                  label: 'Me',
                 ),
               ],
             )
