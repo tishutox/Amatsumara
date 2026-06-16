@@ -93,7 +93,8 @@ class _AppShellState extends State<AppShell> {
             NavigationRail(
               selectedIndex: _currentIndex,
               extended: isExpanded,
-              useIndicator: false,
+              useIndicator: true,
+              indicatorColor: _tabColor(_currentIndex).withValues(alpha: 0.14),
               onDestinationSelected: (index) {
                 setState(() => _currentIndex = index);
               },
@@ -126,7 +127,7 @@ class _AppShellState extends State<AppShell> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  color: Color(0xFFFCFCFF),
                   border: Border(top: BorderSide(color: Color(0xFFE8ECEA))),
                 ),
                 child: Row(
@@ -139,8 +140,15 @@ class _AppShellState extends State<AppShell> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () => setState(() => _currentIndex = index),
-                          child: Padding(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeOut,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
                             padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected ? color.withValues(alpha: 0.16) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
