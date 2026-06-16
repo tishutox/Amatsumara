@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const _chatsColor = Color(0xFFEF372C);
+
 class ChatsPage extends StatelessWidget {
   const ChatsPage({super.key});
 
@@ -28,10 +30,13 @@ class _ChatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+        leading: CircleAvatar(
+          backgroundColor: _chatsColor.withValues(alpha: 0.12),
+          child: const Icon(Icons.person_outline, color: _chatsColor),
+        ),
         title: Text(name),
         subtitle: Text(lastMessage),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: const Icon(Icons.chevron_right, color: _chatsColor),
       ),
     );
   }

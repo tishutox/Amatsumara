@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const _communitiesColor = Color(0xFF5860C3);
+
 class CommunitiesPage extends StatelessWidget {
   const CommunitiesPage({super.key});
 
@@ -20,10 +22,13 @@ class CommunitiesPage extends StatelessWidget {
       itemBuilder: (context, index) {
         return Card(
           child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.groups_2_outlined)),
+            leading: CircleAvatar(
+              backgroundColor: _communitiesColor.withValues(alpha: 0.15),
+              child: const Icon(Icons.groups_2_outlined, color: _communitiesColor),
+            ),
             title: Text(communities[index]),
-            subtitle: const Text('0 neue Beitraege'),
-            trailing: const Icon(Icons.chevron_right),
+            subtitle: const Text('0 neue Beitraege', style: TextStyle(color: _communitiesColor)),
+            trailing: const Icon(Icons.chevron_right, color: _communitiesColor),
           ),
         );
       },

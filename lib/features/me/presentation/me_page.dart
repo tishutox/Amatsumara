@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const _meColor = Color(0xFF5860C3);
+
 class MePage extends StatelessWidget {
   const MePage({super.key});
 
@@ -16,9 +18,19 @@ class MePage extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircleAvatar(radius: 36, child: Icon(Icons.person_outline)),
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundColor: _meColor.withValues(alpha: 0.15),
+                    child: const Icon(Icons.person_outline, color: _meColor),
+                  ),
                   const SizedBox(height: 12),
-                  Text('Me', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Me',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: _meColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     'Hier kommen dein Profil, Einstellungen und Favoriten hin.',

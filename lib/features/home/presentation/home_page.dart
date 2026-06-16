@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+const _discoverColor = Color(0xFFEF372C);
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
@@ -27,9 +29,28 @@ class _WelcomeCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: _discoverColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'DISCOVER',
+                style: TextStyle(
+                  color: _discoverColor,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
               'Willkommen bei Friendship',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: _discoverColor,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -75,7 +96,7 @@ class _ActionTile extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Icon(icon),
+              Icon(icon, color: _discoverColor),
               const SizedBox(width: 12),
               Expanded(child: Text(title)),
             ],
