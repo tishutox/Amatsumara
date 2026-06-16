@@ -16,10 +16,10 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
+  int? _hoveredCompactIndex;
   bool _hasShownUpdateHint = false;
 
-  static const Color _circusRed = Color(0xFFEF372C);
-  static const Color _circusBlue = Color(0xFF5860C3);
+  static const Color _navColor = Color(0xFF5860C3);
 
   static const _titles = ['Discover', 'Communities', 'Chats', 'Me'];
   static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
@@ -42,13 +42,6 @@ class _AppShellState extends State<AppShell> {
     ChatsPage(),
     MePage(),
   ];
-
-  Color _tabColor(int index) {
-    return switch (index) {
-      0 || 2 => _circusRed,
-      _ => _circusBlue,
-    };
-  }
 
   @override
   void didChangeDependencies() {
@@ -85,27 +78,34 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
-        foregroundColor: _tabColor(_currentIndex),
+        foregroundColor: _navColor,
       ),
       body: Row(
         children: [
           if (!isCompact)
-            NavigationRail(
-              selectedIndex: _currentIndex,
-              extended: isExpanded,
-              useIndicator: true,
-              indicatorColor: _tabColor(_currentIndex).withValues(alpha: 0.14),
-              onDestinationSelected: (index) {
-                setState(() => _currentIndex = index);
-              },
-              destinations: List<NavigationRailDestination>.generate(
-                _labels.length,
-                (index) => NavigationRailDestination(
-                  icon: Icon(_lineIcons[index], color: _tabColor(index).withValues(alpha: 0.7)),
-                  selectedIcon: Icon(_fillIcons[index], color: _tabColor(index)),
-                  label: Text(
-                    _labels[index],
-                    style: TextStyle(color: _tabColor(index)),
+            Theme(
+              data: Theme.of(context).copyWith(
+                hoverColor: _navColor.withValues(alpha: 0.10),
+                splashColor: _navColor.withValues(alpha: 0.14),
+                highlightColor: _navColor.withValues(alpha: 0.08),
+              ),
+              child: NavigationRail(
+                selectedIndex: _currentIndex,
+                extended: isExpanded,
+                useIndicator: true,
+                indicatorColor: _navColor.withValues(alpha: 0.16),
+                onDestinationSelected: (index) {
+                  setState(() => _currentIndex = index);
+                },
+                destinations: List<NavigationRailDestination>.generate(
+                  _labels.length,
+                  (index) => NavigationRailDestination(
+                    icon: Icon(_lineIcons[index], color: _navColor.withValues(alpha: 0.72)),
+                    selectedIcon: Icon(_fillIcons[index], color: _navColor),
+                    label: Text(
+                      _labels[index],
+                      style: const TextStyle(color: _navColor),
+                    ),
                   ),
                 ),
               ),
@@ -135,18 +135,25 @@ class _AppShellState extends State<AppShell> {
                     _labels.length,
                     (index) {
                       final isSelected = _currentIndex == index;
-                      final color = _tabColor(index);
+                      final isHovered = _hoveredCompactIndex == index;
                       return Expanded(
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () => setState(() => _currentIndex = index),
+                          onHover: (value) {
+                            setState(() => _hoveredCompactIndex = value ? index : null);
+                          },
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 180),
                             curve: Curves.easeOut,
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             decoration: BoxDecoration(
-                              color: isSelected ? color.withValues(alpha: 0.16) : Colors.transparent,
+                              color: isSelected
+                                  ? _navColor.withValues(alpha: 0.16)
+                                  : isHovered
+                                      ? _navColor.withValues(alpha: 0.10)
+                                      : Colors.transparent,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Column(
@@ -154,13 +161,15 @@ class _AppShellState extends State<AppShell> {
                               children: [
                                 Icon(
                                   isSelected ? _fillIcons[index] : _lineIcons[index],
-                                  color: isSelected ? color : color.withValues(alpha: 0.72),
+                                  color: isSelected ? _navColor : _navColor.withValues(alpha: 0.72),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   _labels[index],
                                   style: TextStyle(
-                                    color: isSelected ? color : color.withValues(alpha: 0.82),
+                                    color: isSelected
+                                        ? _navColor
+                                        : _navColor.withValues(alpha: 0.82),
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                     fontSize: 12,
                                   ),
