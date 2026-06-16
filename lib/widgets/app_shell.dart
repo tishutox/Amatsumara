@@ -1,4 +1,5 @@
 import 'package:friendship/core/responsive/breakpoints.dart';
+import 'package:friendship/core/update/apk_update.dart';
 import 'package:friendship/features/chats/presentation/chats_page.dart';
 import 'package:friendship/features/communities/presentation/communities_page.dart';
 import 'package:friendship/features/home/presentation/home_page.dart';
@@ -15,6 +16,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
+  bool _hasShownUpdateHint = false;
 
   static const Color _circusRed = Color(0xFFEF372C);
   static const Color _circusBlue = Color(0xFF5860C3);
@@ -46,6 +48,32 @@ class _AppShellState extends State<AppShell> {
       0 || 2 => _circusRed,
       _ => _circusBlue,
     };
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (_hasShownUpdateHint) {
+      return;
+    }
+    _hasShownUpdateHint = true;
+
+    Future<void>.delayed(const Duration(seconds: 3), () {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          content: const Text('Neue Version verfuegbar? APK direkt laden.'),
+          action: SnackBarAction(
+            label: 'Download',
+            onPressed: () => ApkUpdate.openLatestApk(context),
+          ),
+        ),
+      );
+    });
   }
 
   @override
