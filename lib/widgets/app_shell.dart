@@ -122,64 +122,82 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
       bottomNavigationBar: isCompact
-          ? SafeArea(
-              top: false,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFCFCFF),
-                  border: Border(top: BorderSide(color: Color(0xFFE8ECEA))),
-                ),
-                child: Row(
-                  children: List<Widget>.generate(
-                    _labels.length,
-                    (index) {
-                      final isSelected = _currentIndex == index;
-                      final isHovered = _hoveredCompactIndex == index;
-                      return Expanded(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => setState(() => _currentIndex = index),
-                          onHover: (value) {
-                            setState(() => _hoveredCompactIndex = value ? index : null);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            curve: Curves.easeOut,
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? _navColor.withValues(alpha: 0.16)
-                                  : isHovered
-                                      ? _navColor.withValues(alpha: 0.10)
-                                      : Colors.transparent,
-                              borderRadius: BorderRadius.circular(14),
+          ? Theme(
+              data: Theme.of(context).copyWith(
+                hoverColor: _navColor.withValues(alpha: 0.10),
+                splashColor: _navColor.withValues(alpha: 0.14),
+                highlightColor: _navColor.withValues(alpha: 0.08),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFCFCFF),
+                    border: Border(top: BorderSide(color: Color(0xFFE8ECEA))),
+                  ),
+                  child: Row(
+                    children: List<Widget>.generate(
+                      _labels.length,
+                      (index) {
+                        final isSelected = _currentIndex == index;
+                        final isHovered = _hoveredCompactIndex == index;
+                        return Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                              (states) {
+                                if (states.contains(WidgetState.pressed)) {
+                                  return _navColor.withValues(alpha: 0.18);
+                                }
+                                if (states.contains(WidgetState.hovered)) {
+                                  return _navColor.withValues(alpha: 0.10);
+                                }
+                                return null;
+                              },
                             ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isSelected ? _fillIcons[index] : _lineIcons[index],
-                                  color: isSelected ? _navColor : _navColor.withValues(alpha: 0.72),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  _labels[index],
-                                  style: TextStyle(
-                                    color: isSelected
-                                        ? _navColor
-                                        : _navColor.withValues(alpha: 0.82),
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    fontSize: 12,
+                            onTap: () => setState(() => _currentIndex = index),
+                            onHover: (value) {
+                              setState(() => _hoveredCompactIndex = value ? index : null);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? _navColor.withValues(alpha: 0.16)
+                                    : isHovered
+                                        ? _navColor.withValues(alpha: 0.10)
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isSelected ? _fillIcons[index] : _lineIcons[index],
+                                    color: isSelected ? _navColor : _navColor.withValues(alpha: 0.72),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _labels[index],
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? _navColor
+                                          : _navColor.withValues(alpha: 0.82),
+                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
