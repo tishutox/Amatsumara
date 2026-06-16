@@ -16,7 +16,23 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
 
+  static const Color _circusRed = Color(0xFFEF372C);
+  static const Color _circusBlue = Color(0xFF5860C3);
+
   static const _titles = ['Discover', 'Communities', 'Chats', 'Me'];
+  static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
+  static const _lineIcons = [
+    Remix.compass_line,
+    Remix.collage_line,
+    Remix.chat_1_line,
+    Remix.user_line,
+  ];
+  static const _fillIcons = [
+    Remix.compass_fill,
+    Remix.collage_fill,
+    Remix.chat_1_fill,
+    Remix.user_fill,
+  ];
 
   static const _pages = [
     HomePage(),
@@ -25,6 +41,13 @@ class _AppShellState extends State<AppShell> {
     MePage(),
   ];
 
+  Color _tabColor(int index) {
+    return switch (index) {
+      0 || 2 => _circusRed,
+      _ => _circusBlue,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
@@ -32,38 +55,31 @@ class _AppShellState extends State<AppShell> {
     final isExpanded = width >= Breakpoints.expanded;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_titles[_currentIndex])),
+      appBar: AppBar(
+        title: Text(_titles[_currentIndex]),
+        foregroundColor: _tabColor(_currentIndex),
+      ),
       body: Row(
         children: [
           if (!isCompact)
             NavigationRail(
               selectedIndex: _currentIndex,
               extended: isExpanded,
+              useIndicator: false,
               onDestinationSelected: (index) {
                 setState(() => _currentIndex = index);
               },
-              destinations: const [
-                NavigationRailDestination(
-                  icon: Icon(Remix.compass_line),
-                  selectedIcon: Icon(Remix.compass_fill),
-                  label: Text('Discover'),
+              destinations: List<NavigationRailDestination>.generate(
+                _labels.length,
+                (index) => NavigationRailDestination(
+                  icon: Icon(_lineIcons[index], color: _tabColor(index).withValues(alpha: 0.7)),
+                  selectedIcon: Icon(_fillIcons[index], color: _tabColor(index)),
+                  label: Text(
+                    _labels[index],
+                    style: TextStyle(color: _tabColor(index)),
+                  ),
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Remix.collage_line),
-                  selectedIcon: Icon(Remix.collage_fill),
-                  label: Text('Communities'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Remix.chat_1_line),
-                  selectedIcon: Icon(Remix.chat_1_fill),
-                  label: Text('Chats'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Remix.user_line),
-                  selectedIcon: Icon(Remix.user_fill),
-                  label: Text('Me'),
-                ),
-              ],
+              ),
             ),
           Expanded(
             child: AnimatedSwitcher(
@@ -77,33 +93,51 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
       bottomNavigationBar: isCompact
-          ? NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: (index) {
-                setState(() => _currentIndex = index);
-              },
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Remix.compass_line),
-                  selectedIcon: Icon(Remix.compass_fill),
-                  label: 'Discover',
+          ? SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Color(0xFFE8ECEA))),
                 ),
-                NavigationDestination(
-                  icon: Icon(Remix.collage_line),
-                  selectedIcon: Icon(Remix.collage_fill),
-                  label: 'Communities',
+                child: Row(
+                  children: List<Widget>.generate(
+                    _labels.length,
+                    (index) {
+                      final isSelected = _currentIndex == index;
+                      final color = _tabColor(index);
+                      return Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => setState(() => _currentIndex = index),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  isSelected ? _fillIcons[index] : _lineIcons[index],
+                                  color: isSelected ? color : color.withValues(alpha: 0.72),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _labels[index],
+                                  style: TextStyle(
+                                    color: isSelected ? color : color.withValues(alpha: 0.82),
+                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-                NavigationDestination(
-                  icon: Icon(Remix.chat_1_line),
-                  selectedIcon: Icon(Remix.chat_1_fill),
-                  label: 'Chats',
-                ),
-                NavigationDestination(
-                  icon: Icon(Remix.user_line),
-                  selectedIcon: Icon(Remix.user_fill),
-                  label: 'Me',
-                ),
-              ],
+              ),
             )
           : null,
     );
