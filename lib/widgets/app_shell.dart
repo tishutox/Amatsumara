@@ -164,7 +164,7 @@ class _AppShellState extends State<AppShell> {
                               duration: const Duration(milliseconds: 180),
                               curve: Curves.easeOut,
                               margin: const EdgeInsets.symmetric(horizontal: 4),
-                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? _navColor.withValues(alpha: 0.16)
@@ -179,17 +179,6 @@ class _AppShellState extends State<AppShell> {
                                   Icon(
                                     isSelected ? _fillIcons[index] : _lineIcons[index],
                                     color: isSelected ? _navColor : _navColor.withValues(alpha: 0.72),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _labels[index],
-                                    style: TextStyle(
-                                      color: isSelected
-                                          ? _navColor
-                                          : _navColor.withValues(alpha: 0.82),
-                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                      fontSize: 12,
-                                    ),
                                   ),
                                 ],
                               ),
