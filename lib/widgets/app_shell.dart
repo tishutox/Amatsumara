@@ -26,14 +26,14 @@ class _AppShellState extends State<AppShell> {
   static const _lineIcons = [
     Remix.compass_line,
     Remix.collage_line,
-    Remix.chat_1_line,
-    Remix.user_line,
+    Remix.message_3_line,
+    Remix.account_circle_line,
   ];
   static const _fillIcons = [
     Remix.compass_fill,
     Remix.collage_fill,
-    Remix.chat_1_fill,
-    Remix.user_fill,
+    Remix.message_3_fill,
+    Remix.account_circle_fill,
   ];
 
   static const _pages = [
