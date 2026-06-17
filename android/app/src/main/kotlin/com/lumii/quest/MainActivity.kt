@@ -1,4 +1,4 @@
-package com.friendship.app.friendship
+package com.lumii.quest
 
 import io.flutter.embedding.android.FlutterActivity
 

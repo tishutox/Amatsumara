@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.friendship.app" "\0"
-            VALUE "FileDescription", "friendship" "\0"
+            VALUE "CompanyName", "Lumii Quest" "\0"
+            VALUE "FileDescription", "Lumii Quest" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "friendship" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.friendship.app. All rights reserved." "\0"
-            VALUE "OriginalFilename", "friendship.exe" "\0"
-            VALUE "ProductName", "friendship" "\0"
+            VALUE "InternalName", "lumii_quest" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Lumii Quest. All rights reserved." "\0"
+            VALUE "OriginalFilename", "lumii_quest.exe" "\0"
+            VALUE "ProductName", "Lumii Quest" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

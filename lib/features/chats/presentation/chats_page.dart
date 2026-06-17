@@ -10,11 +10,11 @@ class ChatsPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: const [
-        _ChatTile(name: 'Lena', lastMessage: 'Kannst du den neuen Post checken?'),
+        _ChatTile(name: 'Lena', lastMessage: 'Can you check the new post?'),
         SizedBox(height: 10),
-        _ChatTile(name: 'Kai', lastMessage: 'Ich baue gerade die Community-Regeln.'),
+        _ChatTile(name: 'Kai', lastMessage: 'I am working on the community guidelines right now.'),
         SizedBox(height: 10),
-        _ChatTile(name: 'Mina', lastMessage: 'Heute Abend Voice Chat?'),
+        _ChatTile(name: 'Mina', lastMessage: 'Voice chat tonight?'),
       ],
     );
   }

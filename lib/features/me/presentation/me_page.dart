@@ -1,4 +1,4 @@
-import 'package:friendship/core/update/apk_update.dart';
+import 'package:lumii_quest/core/update/apk_update.dart';
 import 'package:flutter/material.dart';
 
 const _meColor = Color(0xFF5860C3);
@@ -34,7 +34,7 @@ class MePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Hier kommen dein Profil, Einstellungen und Favoriten hin.',
+                    'Your profile, settings, and favorites will appear here.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
@@ -42,7 +42,7 @@ class MePage extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: () => ApkUpdate.openLatestApk(context),
                     icon: const Icon(Icons.download_for_offline_outlined),
-                    label: const Text('Neueste Android APK herunterladen'),
+                    label: const Text('Download Latest Android APK'),
                   ),
                 ],
               ),

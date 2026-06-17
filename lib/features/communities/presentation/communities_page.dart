@@ -27,7 +27,7 @@ class CommunitiesPage extends StatelessWidget {
               child: const Icon(Icons.groups_2_outlined, color: _communitiesColor),
             ),
             title: Text(communities[index]),
-            subtitle: const Text('0 neue Beitraege', style: TextStyle(color: _communitiesColor)),
+            subtitle: const Text('0 new posts', style: TextStyle(color: _communitiesColor)),
             trailing: const Icon(Icons.chevron_right, color: _communitiesColor),
           ),
         );

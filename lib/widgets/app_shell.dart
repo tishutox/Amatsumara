@@ -1,9 +1,9 @@
-import 'package:friendship/core/responsive/breakpoints.dart';
-import 'package:friendship/core/update/apk_update.dart';
-import 'package:friendship/features/chats/presentation/chats_page.dart';
-import 'package:friendship/features/communities/presentation/communities_page.dart';
-import 'package:friendship/features/home/presentation/home_page.dart';
-import 'package:friendship/features/me/presentation/me_page.dart';
+import 'package:lumii_quest/core/responsive/breakpoints.dart';
+import 'package:lumii_quest/core/update/apk_update.dart';
+import 'package:lumii_quest/features/chats/presentation/chats_page.dart';
+import 'package:lumii_quest/features/communities/presentation/communities_page.dart';
+import 'package:lumii_quest/features/home/presentation/home_page.dart';
+import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:flutter/material.dart';
 import 'package:remixicon/remixicon.dart';
 
@@ -59,7 +59,7 @@ class _AppShellState extends State<AppShell> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 4),
-          content: const Text('Neue Version verfuegbar? APK direkt laden.'),
+          content: const Text('A new version is available. Download the APK directly.'),
           action: SnackBarAction(
             label: 'Download',
             onPressed: () => ApkUpdate.openLatestApk(context),

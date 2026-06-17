@@ -18,10 +18,10 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   const CircleAvatar(radius: 36, child: Icon(Icons.person_outline)),
                   const SizedBox(height: 12),
-                  Text('Dein Profil', style: Theme.of(context).textTheme.titleLarge),
+                  Text('Your Profile', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 6),
                   Text(
-                    'Hier kommen Bio, Badges, Favoriten und deine Community-Aktivitaet hin.',
+                    'Your bio, badges, favorites, and community activity will appear here.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),

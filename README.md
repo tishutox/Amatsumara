@@ -1,12 +1,12 @@
-# Friendship
+# Lumii Quest
 
-Cross-platform Grundgeruest fuer einen Amino-inspirierten Community-Hub.
+Cross-platform foundation for an Amino-inspired community hub.
 
-## Ziele
+## Goals
 
-- Eine Codebase fuer Android, iOS, Web und Desktop (Windows, macOS, Linux)
-- Responsive Layouts fuer Handy, Tablet und grosse Bildschirme
-- Modulare Struktur fuer spaetere Features wie Feed, Chat, Communitys und Profile
+- One codebase for Android, iOS, Web, and Desktop (Windows, macOS, Linux)
+- Responsive layouts for phone, tablet, and large screens
+- Modular structure for future features like feed, chat, communities, and profiles
 
 ## Projektstruktur
 
@@ -23,20 +23,20 @@ lib/
 	widgets/
 ```
 
-## Voraussetzungen
+## Requirements
 
 - Flutter SDK (stable)
-- Android Studio fuer Android Build Tools
-- Xcode (nur auf macOS) fuer iOS Build Tools
+- Android Studio for Android build tools
+- Xcode (macOS only) for iOS build tools
 
-## Starten
+## Run
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-## Plattform-spezifisch starten
+## Run By Platform
 
 ```bash
 flutter run -d windows
@@ -45,9 +45,9 @@ flutter run -d android
 flutter run -d ios
 ```
 
-## Naechste sinnvolle Schritte
+## Suggested Next Steps
 
-- Authentifizierung (Email, OAuth)
-- Backend (z. B. Supabase/Firebase oder eigenes API)
-- Datenmodelle fuer Community, Post, Kommentar, Chat
-- State-Management (Riverpod oder Bloc)
+- Authentication (Email, OAuth)
+- Backend (for example Supabase/Firebase or your own API)
+- Data models for community, post, comment, and chat
+- State management (Riverpod or Bloc)

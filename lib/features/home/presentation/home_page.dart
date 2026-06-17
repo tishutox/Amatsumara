@@ -1,106 +1,240 @@
+import 'dart:async';
+
+import 'package:lumii_quest/core/responsive/breakpoints.dart';
 import 'package:flutter/material.dart';
 
-const _discoverColor = Color(0xFFEF372C);
-
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  static const List<String> _bannerPaths = [
+    'banners/Albania.png',
+    'banners/Romania.png',
+    'banners/Switzerland.png',
+  ];
+
+  final PageController _pageController = PageController();
+  Timer? _bannerTimer;
+  int _currentBannerIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startBannerTimer();
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _startBannerTimer() {
+    _bannerTimer?.cancel();
+    _bannerTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!_pageController.hasClients) {
+        return;
+      }
+
+      final nextIndex = (_currentBannerIndex + 1) % _bannerPaths.length;
+      _pageController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < Breakpoints.compact;
+    if (isMobile) {
+      return _MobileDiscoverContent(
+        bannerPaths: _bannerPaths,
+        pageController: _pageController,
+        currentBannerIndex: _currentBannerIndex,
+        onPageChanged: (index) {
+          setState(() => _currentBannerIndex = index);
+        },
+        onManualSlide: _startBannerTimer,
+      );
+    }
+
+    return const _LargeDiscoverContent();
+  }
+}
+
+class _MobileDiscoverContent extends StatelessWidget {
+  const _MobileDiscoverContent({
+    required this.bannerPaths,
+    required this.pageController,
+    required this.currentBannerIndex,
+    required this.onPageChanged,
+    required this.onManualSlide,
+  });
+
+  final List<String> bannerPaths;
+  final PageController pageController;
+  final int currentBannerIndex;
+  final ValueChanged<int> onPageChanged;
+  final VoidCallback onManualSlide;
+
+  @override
+  Widget build(BuildContext context) {
+    final bannerHeight = MediaQuery.sizeOf(context).width * (500 / 1500);
+
     return ListView(
-      padding: const EdgeInsets.all(20),
-      children: const [
-        _WelcomeCard(),
-        SizedBox(height: 16),
-        _QuickActions(),
+      children: [
+        SizedBox(
+          height: bannerHeight,
+          child: PageView.builder(
+            controller: pageController,
+            itemCount: bannerPaths.length,
+            onPageChanged: (index) {
+              onPageChanged(index);
+              onManualSlide();
+            },
+            itemBuilder: (context, index) {
+              return Image.asset(
+                bannerPaths[index],
+                fit: BoxFit.cover,
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List<Widget>.generate(
+              bannerPaths.length,
+              (index) {
+                final isActive = index == currentBannerIndex;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: isActive ? 18 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: _ComingSoonCard(
+            title: 'Discover Content Coming Soon',
+            description:
+                'This area is prepared as a placeholder. The final Discover content will be added next.',
+          ),
+        ),
+        const SizedBox(height: 14),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+          child: _ComingSoonCard(
+            title: 'Additional Modules',
+            description:
+                'More Discover sections will appear below the banner here.',
+          ),
+        ),
       ],
     );
   }
 }
 
-class _WelcomeCard extends StatelessWidget {
-  const _WelcomeCard();
+class _LargeDiscoverContent extends StatelessWidget {
+  const _LargeDiscoverContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isExpanded = constraints.maxWidth >= Breakpoints.expanded;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isExpanded ? 1220 : 980),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _ComingSoonCard(
+                    title: 'Discover for Tablet/Desktop Is In Progress',
+                    description:
+                        'The mobile banner experience is already in place. This layout is a prepared area for the new Discover structure.',
+                  ),
+                  const SizedBox(height: 18),
+                  GridView.count(
+                    crossAxisCount: isExpanded ? 3 : 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 2.4,
+                    children: const [
+                      _ComingSoonCard(
+                        title: 'Section A',
+                        description: 'Reserved space for curated content.',
+                      ),
+                      _ComingSoonCard(
+                        title: 'Section B',
+                        description: 'Reserved space for recommendations.',
+                      ),
+                      _ComingSoonCard(
+                        title: 'Section C',
+                        description: 'Reserved space for campaigns and highlights.',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ComingSoonCard extends StatelessWidget {
+  const _ComingSoonCard({required this.title, required this.description});
+
+  final String title;
+  final String description;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: _discoverColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Text(
-                'DISCOVER',
-                style: TextStyle(
-                  color: _discoverColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             Text(
-              'Willkommen bei Friendship',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: _discoverColor,
-                    fontWeight: FontWeight.w800,
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Dieses Grundgeruest ist bereit fuer Community-Feed, Chat, Gruppen und Profile.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text(description),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActions extends StatelessWidget {
-  const _QuickActions();
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: const [
-        _ActionTile(title: 'Community erstellen', icon: Icons.add_circle_outline),
-        _ActionTile(title: 'Beitrag verfassen', icon: Icons.edit_outlined),
-        _ActionTile(title: 'Mitglieder finden', icon: Icons.people_alt_outlined),
-      ],
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.title, required this.icon});
-
-  final String title;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 200, maxWidth: 280),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(icon, color: _discoverColor),
-              const SizedBox(width: 12),
-              Expanded(child: Text(title)),
-            ],
-          ),
         ),
       ),
     );
