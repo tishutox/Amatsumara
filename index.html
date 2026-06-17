@@ -151,7 +151,7 @@
     <select id="colorMode">
       <option value="light">Light</option>
       <option value="dark">Dark</option>
-      <option value="sakura">Sakura</option>
+      <option value="hellaverse">Hellaverse</option>
       <option value="glitch">Glitch</option>
     </select>
   </div>
@@ -162,25 +162,25 @@
       This is the current download page. You can download the Android app directly as an APK.
     </p>
 
-    <a id="apkLink" class="cta" href="downloads/lumii-quest-android-v1.0.5.apk" download>
+    <a id="apkLink" class="cta" href="downloads/lumii-quest-android-v1.0.7.apk?v=1.0.7" download>
       Download Android APK
     </a>
 
-    <p id="apkFileMeta" class="meta">File: lumii-quest-android-v1.0.5.apk</p>
+    <p id="apkFileMeta" class="meta">File: lumii-quest-android-v1.0.7.apk</p>
 
     <section class="panel" aria-label="Version">
       <h2>Version</h2>
       <ul class="facts">
-        <li><strong>Release:</strong> <span id="apkRelease">v1.0.5</span></li>
-        <li><strong>File size:</strong> <span id="apkSize">46.2 MB</span></li>
-        <li><strong>Build time:</strong> <span id="apkBuildTime">2026-06-17 18:30</span></li>
+        <li><strong>Release:</strong> <span id="apkRelease">v1.0.7</span></li>
+        <li><strong>File size:</strong> <span id="apkSize">45.8 MB</span></li>
+        <li><strong>Build time:</strong> <span id="apkBuildTime">2026-06-17 20:53</span></li>
       </ul>
     </section>
 
     <section class="panel" aria-label="Changelog">
       <h2>Changelog</h2>
       <ul class="changelog">
-        <li id="apkChangelogEntry">Release v1.0.5 with the latest Android APK.</li>
+        <li id="apkChangelogEntry">Release v1.0.7 with the latest Android APK.</li>
         <li>Navbar is now consistently blue-lilac (#5860c3) on all devices.</li>
         <li>The active tab once again has a visible background surface.</li>
         <li>Mobile navigation now shows icons only without labels.</li>
@@ -191,10 +191,10 @@
 
   <script>
     const latestApk = {
-      version: '1.0.5',
-      fileName: 'lumii-quest-android-v1.0.5.apk',
-      fileSize: '46.2 MB',
-      buildTime: '2026-06-17 18:30'
+      version: '1.0.7',
+      fileName: 'lumii-quest-android-v1.0.7.apk',
+      fileSize: '45.8 MB',
+      buildTime: '2026-06-17 20:53'
     };
 
     const modes = {
@@ -210,11 +210,11 @@
         ink: '#f2f4ff',
         muted: '#b9bfd8'
       },
-      sakura: {
-        primary: '#ff00ff',
-        bg: '#ffcbff',
-        ink: '#341634',
-        muted: '#6d3f6d'
+      hellaverse: {
+        primary: '#f90142',
+        bg: '#121212',
+        ink: '#f2f4ff',
+        muted: '#b9bfd8'
       },
       glitch: {
         primary: '#db5dc9',
@@ -235,7 +235,7 @@
     const apkChangelogEntry = document.getElementById('apkChangelogEntry');
 
     function applyLatestApk() {
-      apkLink.href = `downloads/${latestApk.fileName}`;
+      apkLink.href = `downloads/${latestApk.fileName}?v=${latestApk.version}`;
       apkFileMeta.textContent = `File: ${latestApk.fileName}`;
       apkRelease.textContent = `v${latestApk.version}`;
       apkSize.textContent = latestApk.fileSize;

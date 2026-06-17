@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum SystemColorMode {
   light,
   dark,
-  sakura,
+  hellaverse,
   glitch,
 }
 
@@ -64,9 +64,9 @@ class _AppShellState extends State<AppShell> {
       navColor: Color(0xFF5860C3),
       backgroundColor: Color(0xFF121212),
     ),
-    SystemColorMode.sakura: _SystemPalette(
-      navColor: Color(0xFFFF00FF),
-      backgroundColor: Color(0xFFFFCBFF),
+    SystemColorMode.hellaverse: _SystemPalette(
+      navColor: Color(0xFFF90142),
+      backgroundColor: Color(0xFF121212),
     ),
     SystemColorMode.glitch: _SystemPalette(
       navColor: Color(0xFFDB5DC9),
@@ -89,8 +89,8 @@ class _AppShellState extends State<AppShell> {
         return 'Light';
       case SystemColorMode.dark:
         return 'Dark';
-      case SystemColorMode.sakura:
-        return 'Sakura';
+      case SystemColorMode.hellaverse:
+        return 'Hellaverse';
       case SystemColorMode.glitch:
         return 'Glitch';
     }
