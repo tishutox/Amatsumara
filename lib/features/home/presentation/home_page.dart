@@ -4,7 +4,12 @@ import 'package:lumii_quest/core/responsive/breakpoints.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({
+    super.key,
+    required this.navIconColor,
+  });
+
+  final Color navIconColor;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -58,6 +63,7 @@ class _HomePageState extends State<HomePage> {
         bannerPaths: _bannerPaths,
         pageController: _pageController,
         currentBannerIndex: _currentBannerIndex,
+        navIconColor: widget.navIconColor,
         onPageChanged: (index) {
           setState(() => _currentBannerIndex = index);
         },
@@ -69,6 +75,7 @@ class _HomePageState extends State<HomePage> {
       bannerPaths: _bannerPaths,
       pageController: _pageController,
       currentBannerIndex: _currentBannerIndex,
+      navIconColor: widget.navIconColor,
       onPageChanged: (index) {
         setState(() => _currentBannerIndex = index);
       },
@@ -82,6 +89,7 @@ class _MobileDiscoverContent extends StatelessWidget {
     required this.bannerPaths,
     required this.pageController,
     required this.currentBannerIndex,
+    required this.navIconColor,
     required this.onPageChanged,
     required this.onManualSlide,
   });
@@ -89,6 +97,7 @@ class _MobileDiscoverContent extends StatelessWidget {
   final List<String> bannerPaths;
   final PageController pageController;
   final int currentBannerIndex;
+  final Color navIconColor;
   final ValueChanged<int> onPageChanged;
   final VoidCallback onManualSlide;
 
@@ -101,6 +110,7 @@ class _MobileDiscoverContent extends StatelessWidget {
           bannerPaths: bannerPaths,
           pageController: pageController,
           currentBannerIndex: currentBannerIndex,
+          navIconColor: navIconColor,
           onPageChanged: onPageChanged,
           onManualSlide: onManualSlide,
           maxWidth: double.infinity,
@@ -135,6 +145,7 @@ class _LargeDiscoverContent extends StatelessWidget {
     required this.bannerPaths,
     required this.pageController,
     required this.currentBannerIndex,
+    required this.navIconColor,
     required this.onPageChanged,
     required this.onManualSlide,
   });
@@ -142,6 +153,7 @@ class _LargeDiscoverContent extends StatelessWidget {
   final List<String> bannerPaths;
   final PageController pageController;
   final int currentBannerIndex;
+  final Color navIconColor;
   final ValueChanged<int> onPageChanged;
   final VoidCallback onManualSlide;
 
@@ -162,6 +174,7 @@ class _LargeDiscoverContent extends StatelessWidget {
                     bannerPaths: bannerPaths,
                     pageController: pageController,
                     currentBannerIndex: currentBannerIndex,
+                    navIconColor: navIconColor,
                     onPageChanged: onPageChanged,
                     onManualSlide: onManualSlide,
                     maxWidth: isExpanded ? 1160 : 920,
@@ -211,6 +224,7 @@ class _BannerCarouselWidget extends StatelessWidget {
     required this.bannerPaths,
     required this.pageController,
     required this.currentBannerIndex,
+    required this.navIconColor,
     required this.onPageChanged,
     required this.onManualSlide,
     required this.maxWidth,
@@ -221,6 +235,7 @@ class _BannerCarouselWidget extends StatelessWidget {
   final List<String> bannerPaths;
   final PageController pageController;
   final int currentBannerIndex;
+  final Color navIconColor;
   final ValueChanged<int> onPageChanged;
   final VoidCallback onManualSlide;
   final double maxWidth;
@@ -276,11 +291,8 @@ class _BannerCarouselWidget extends StatelessWidget {
                   height: 8,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.28),
+                        ? navIconColor
+                        : navIconColor.withValues(alpha: 0.28),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 );

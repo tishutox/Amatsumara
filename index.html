@@ -38,7 +38,29 @@
       background: var(--card);
       border-radius: 24px;
       padding: 28px;
-      box-shadow: 0 14px 40px rgba(49, 58, 142, 0.14);
+    }
+
+    .mode-switch {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 10;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      background: var(--card);
+      border: 1px solid #dfe2ff;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .mode-switch select {
+      border: 1px solid #d8dcff;
+      border-radius: 8px;
+      padding: 5px 8px;
+      color: var(--ink);
+      background: #fff;
     }
 
     h1 {
@@ -124,31 +146,41 @@
   </style>
 </head>
 <body>
+  <div class="mode-switch" aria-label="System colors">
+    <label for="colorMode">Systemfarben</label>
+    <select id="colorMode">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+      <option value="sakura">Sakura</option>
+      <option value="glitch">Glitch</option>
+    </select>
+  </div>
+
   <main class="card">
     <h1>Lumii Quest Android App</h1>
     <p>
       This is the current download page. You can download the Android app directly as an APK.
     </p>
 
-    <a class="cta" href="downloads/lumii-quest-android-v1.0.4.apk" download>
+    <a id="apkLink" class="cta" href="downloads/lumii-quest-android-v1.0.4.apk" download>
       Download Android APK
     </a>
 
-    <p class="meta">File: lumii-quest-android-v1.0.4.apk</p>
+    <p id="apkFileMeta" class="meta">File: lumii-quest-android-v1.0.4.apk</p>
 
     <section class="panel" aria-label="Version">
       <h2>Version</h2>
       <ul class="facts">
-        <li><strong>Release:</strong> v1.0.4</li>
-        <li><strong>File size:</strong> 45.4 MB</li>
-        <li><strong>Build time:</strong> 2026-06-17 08:34</li>
+        <li><strong>Release:</strong> <span id="apkRelease">v1.0.4</span></li>
+        <li><strong>File size:</strong> <span id="apkSize">45.4 MB</span></li>
+        <li><strong>Build time:</strong> <span id="apkBuildTime">2026-06-17 08:34</span></li>
       </ul>
     </section>
 
     <section class="panel" aria-label="Changelog">
       <h2>Changelog</h2>
       <ul class="changelog">
-        <li>Release v1.0.4 with the latest Android APK.</li>
+        <li id="apkChangelogEntry">Release v1.0.4 with the latest Android APK.</li>
         <li>Navbar is now consistently blue-lilac (#5860c3) on all devices.</li>
         <li>The active tab once again has a visible background surface.</li>
         <li>Mobile navigation now shows icons only without labels.</li>
@@ -156,5 +188,86 @@
       </ul>
     </section>
   </main>
+
+  <script>
+    const latestApk = {
+      version: '1.0.4',
+      fileName: 'lumii-quest-android-v1.0.4.apk',
+      fileSize: '45.4 MB',
+      buildTime: '2026-06-17 08:34'
+    };
+
+    const modes = {
+      light: {
+        primary: '#5860c3',
+        bg: '#ffffff',
+        ink: '#1d2140',
+        muted: '#62678f'
+      },
+      dark: {
+        primary: '#5860c3',
+        bg: '#121212',
+        ink: '#f2f4ff',
+        muted: '#b9bfd8'
+      },
+      sakura: {
+        primary: '#ff00ff',
+        bg: '#ffcbff',
+        ink: '#341634',
+        muted: '#6d3f6d'
+      },
+      glitch: {
+        primary: '#db5dc9',
+        bg: '#121212',
+        ink: '#f2f4ff',
+        muted: '#b9bfd8'
+      }
+    };
+
+    const colorModeStorageKey = 'lumii-color-mode';
+    const root = document.documentElement;
+    const modeSelect = document.getElementById('colorMode');
+    const apkLink = document.getElementById('apkLink');
+    const apkFileMeta = document.getElementById('apkFileMeta');
+    const apkRelease = document.getElementById('apkRelease');
+    const apkSize = document.getElementById('apkSize');
+    const apkBuildTime = document.getElementById('apkBuildTime');
+    const apkChangelogEntry = document.getElementById('apkChangelogEntry');
+
+    function applyLatestApk() {
+      apkLink.href = `downloads/${latestApk.fileName}`;
+      apkFileMeta.textContent = `File: ${latestApk.fileName}`;
+      apkRelease.textContent = `v${latestApk.version}`;
+      apkSize.textContent = latestApk.fileSize;
+      apkBuildTime.textContent = latestApk.buildTime;
+      apkChangelogEntry.textContent = `Release v${latestApk.version} with the latest Android APK.`;
+    }
+
+    function applyMode(modeName) {
+      const mode = modes[modeName] || modes.light;
+      root.style.setProperty('--primary', mode.primary);
+      root.style.setProperty('--primary-press', mode.primary);
+      root.style.setProperty('--bg-top', mode.bg);
+      root.style.setProperty('--bg-bottom', mode.bg);
+      root.style.setProperty('--card', mode.bg);
+      root.style.setProperty('--ink', mode.ink);
+      root.style.setProperty('--muted', mode.muted);
+      root.style.setProperty('--ring', 'rgba(88, 96, 195, 0.28)');
+    }
+
+    modeSelect.addEventListener('change', (event) => {
+      const selectedMode = event.target.value;
+      applyMode(selectedMode);
+      localStorage.setItem(colorModeStorageKey, selectedMode);
+    });
+
+    const initialMode = modes[localStorage.getItem(colorModeStorageKey)]
+      ? localStorage.getItem(colorModeStorageKey)
+      : 'light';
+    modeSelect.value = initialMode;
+
+    applyLatestApk();
+    applyMode(initialMode);
+  </script>
 </body>
 </html>

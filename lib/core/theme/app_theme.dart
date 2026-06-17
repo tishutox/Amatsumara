@@ -9,6 +9,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      shadowColor: Colors.transparent,
       colorScheme: const ColorScheme.light(
         primary: primaryBlue,
         onPrimary: Colors.white,
@@ -22,9 +23,13 @@ class AppTheme {
         centerTitle: false,
         backgroundColor: Color(0xFFFFFFFF),
         elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
         elevation: 0,
+        shadowColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
         color: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),

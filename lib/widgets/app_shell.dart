@@ -6,6 +6,24 @@ import 'package:lumii_quest/features/home/presentation/home_page.dart';
 import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:flutter/material.dart';
 import 'package:remixicon/remixicon.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+enum SystemColorMode {
+  light,
+  dark,
+  sakura,
+  glitch,
+}
+
+class _SystemPalette {
+  const _SystemPalette({
+    required this.navColor,
+    required this.backgroundColor,
+  });
+
+  final Color navColor;
+  final Color backgroundColor;
+}
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -15,11 +33,12 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
+  static const String _colorModePrefKey = 'system_color_mode';
+
   int _currentIndex = 0;
   int? _hoveredCompactIndex;
   bool _hasShownUpdateHint = false;
-
-  static const Color _navColor = Color(0xFF5860C3);
+  SystemColorMode _colorMode = SystemColorMode.light;
 
   static const _titles = ['Discover', 'Communities', 'Chats', 'Me'];
   static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
@@ -36,12 +55,81 @@ class _AppShellState extends State<AppShell> {
     Remix.account_circle_fill,
   ];
 
-  static const _pages = [
-    HomePage(),
-    CommunitiesPage(),
-    ChatsPage(),
-    MePage(),
-  ];
+  static const Map<SystemColorMode, _SystemPalette> _palettes = {
+    SystemColorMode.light: _SystemPalette(
+      navColor: Color(0xFF5860C3),
+      backgroundColor: Color(0xFFFFFFFF),
+    ),
+    SystemColorMode.dark: _SystemPalette(
+      navColor: Color(0xFF5860C3),
+      backgroundColor: Color(0xFF121212),
+    ),
+    SystemColorMode.sakura: _SystemPalette(
+      navColor: Color(0xFFFF00FF),
+      backgroundColor: Color(0xFFFFCBFF),
+    ),
+    SystemColorMode.glitch: _SystemPalette(
+      navColor: Color(0xFFDB5DC9),
+      backgroundColor: Color(0xFF121212),
+    ),
+  };
+
+  List<Widget> _buildPages(Color navColor) {
+    return [
+      HomePage(navIconColor: navColor),
+      const CommunitiesPage(),
+      const ChatsPage(),
+      const MePage(),
+    ];
+  }
+
+  String _modeLabel(SystemColorMode mode) {
+    switch (mode) {
+      case SystemColorMode.light:
+        return 'Light';
+      case SystemColorMode.dark:
+        return 'Dark';
+      case SystemColorMode.sakura:
+        return 'Sakura';
+      case SystemColorMode.glitch:
+        return 'Glitch';
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedColorMode();
+  }
+
+  Future<void> _loadSavedColorMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMode = prefs.getString(_colorModePrefKey);
+    if (savedMode == null) {
+      return;
+    }
+
+    SystemColorMode? matchingMode;
+    for (final mode in SystemColorMode.values) {
+      if (mode.name == savedMode) {
+        matchingMode = mode;
+        break;
+      }
+    }
+
+    if (matchingMode == null || !mounted) {
+      return;
+    }
+
+    final selectedMode = matchingMode;
+    setState(() => _colorMode = selectedMode);
+  }
+
+  Future<void> _setColorMode(SystemColorMode mode) async {
+    setState(() => _colorMode = mode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_colorModePrefKey, mode.name);
+  }
 
   @override
   void didChangeDependencies() {
@@ -74,37 +162,96 @@ class _AppShellState extends State<AppShell> {
     final width = MediaQuery.sizeOf(context).width;
     final isCompact = width < Breakpoints.compact;
     final isExpanded = width >= Breakpoints.expanded;
+    final palette = _palettes[_colorMode]!;
+    final navColor = palette.navColor;
+    final backgroundColor = palette.backgroundColor;
+    final pages = _buildPages(navColor);
 
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text(_titles[_currentIndex]),
-        foregroundColor: _navColor,
+        foregroundColor: navColor,
+        backgroundColor: backgroundColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(top: 6, right: 18, bottom: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: navColor.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: navColor.withValues(alpha: 0.24)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Remix.palette_line,
+                    size: 16,
+                    color: navColor,
+                  ),
+                  const SizedBox(width: 6),
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<SystemColorMode>(
+                      value: _colorMode,
+                      borderRadius: BorderRadius.circular(12),
+                      dropdownColor: backgroundColor,
+                      iconEnabledColor: navColor,
+                      style: TextStyle(
+                        color: navColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      onChanged: (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        _setColorMode(value);
+                      },
+                      items: SystemColorMode.values
+                          .map(
+                            (mode) => DropdownMenuItem<SystemColorMode>(
+                              value: mode,
+                              child: Text(_modeLabel(mode)),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: Row(
         children: [
           if (!isCompact)
             Theme(
               data: Theme.of(context).copyWith(
-                hoverColor: _navColor.withValues(alpha: 0.10),
-                splashColor: _navColor.withValues(alpha: 0.14),
-                highlightColor: _navColor.withValues(alpha: 0.08),
+                hoverColor: navColor.withValues(alpha: 0.10),
+                splashColor: navColor.withValues(alpha: 0.14),
+                highlightColor: navColor.withValues(alpha: 0.08),
               ),
               child: NavigationRail(
+                backgroundColor: backgroundColor,
                 selectedIndex: _currentIndex,
                 extended: isExpanded,
                 useIndicator: true,
-                indicatorColor: _navColor.withValues(alpha: 0.16),
+                indicatorColor: navColor.withValues(alpha: 0.16),
                 onDestinationSelected: (index) {
                   setState(() => _currentIndex = index);
                 },
                 destinations: List<NavigationRailDestination>.generate(
                   _labels.length,
                   (index) => NavigationRailDestination(
-                    icon: Icon(_lineIcons[index], color: _navColor.withValues(alpha: 0.72)),
-                    selectedIcon: Icon(_fillIcons[index], color: _navColor),
+                    icon: Icon(_lineIcons[index], color: navColor.withValues(alpha: 0.72)),
+                    selectedIcon: Icon(_fillIcons[index], color: navColor),
                     label: Text(
                       _labels[index],
-                      style: const TextStyle(color: _navColor),
+                      style: TextStyle(color: navColor),
                     ),
                   ),
                 ),
@@ -115,7 +262,7 @@ class _AppShellState extends State<AppShell> {
               duration: const Duration(milliseconds: 220),
               child: KeyedSubtree(
                 key: ValueKey<int>(_currentIndex),
-                child: _pages[_currentIndex],
+                child: pages[_currentIndex],
               ),
             ),
           ),
@@ -124,17 +271,17 @@ class _AppShellState extends State<AppShell> {
       bottomNavigationBar: isCompact
           ? Theme(
               data: Theme.of(context).copyWith(
-                hoverColor: _navColor.withValues(alpha: 0.10),
-                splashColor: _navColor.withValues(alpha: 0.14),
-                highlightColor: _navColor.withValues(alpha: 0.08),
+                hoverColor: navColor.withValues(alpha: 0.10),
+                splashColor: navColor.withValues(alpha: 0.14),
+                highlightColor: navColor.withValues(alpha: 0.08),
               ),
               child: SafeArea(
                 top: false,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFCFCFF),
-                    border: Border(top: BorderSide(color: Color(0xFFE8ECEA))),
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    border: Border(top: BorderSide(color: navColor.withValues(alpha: 0.24))),
                   ),
                   child: Row(
                     children: List<Widget>.generate(
@@ -148,10 +295,10 @@ class _AppShellState extends State<AppShell> {
                             overlayColor: WidgetStateProperty.resolveWith<Color?>(
                               (states) {
                                 if (states.contains(WidgetState.pressed)) {
-                                  return _navColor.withValues(alpha: 0.18);
+                                  return navColor.withValues(alpha: 0.18);
                                 }
                                 if (states.contains(WidgetState.hovered)) {
-                                  return _navColor.withValues(alpha: 0.10);
+                                  return navColor.withValues(alpha: 0.10);
                                 }
                                 return null;
                               },
@@ -167,9 +314,9 @@ class _AppShellState extends State<AppShell> {
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? _navColor.withValues(alpha: 0.16)
+                                    ? navColor.withValues(alpha: 0.16)
                                     : isHovered
-                                        ? _navColor.withValues(alpha: 0.10)
+                                        ? navColor.withValues(alpha: 0.10)
                                         : Colors.transparent,
                                 borderRadius: BorderRadius.circular(14),
                               ),
@@ -178,7 +325,7 @@ class _AppShellState extends State<AppShell> {
                                 children: [
                                   Icon(
                                     isSelected ? _fillIcons[index] : _lineIcons[index],
-                                    color: isSelected ? _navColor : _navColor.withValues(alpha: 0.72),
+                                    color: isSelected ? navColor : navColor.withValues(alpha: 0.72),
                                   ),
                                 ],
                               ),
