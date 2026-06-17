@@ -261,9 +261,12 @@ class _BannerCarouselWidget extends StatelessWidget {
                   onManualSlide();
                 },
                 itemBuilder: (context, index) {
-                  return Image.asset(
-                    bannerPaths[index],
-                    fit: BoxFit.cover,
+                  return ColoredBox(
+                    color: Theme.of(context).colorScheme.surface,
+                    child: Image.asset(
+                      bannerPaths[index],
+                      fit: BoxFit.contain,
+                    ),
                   );
                 },
               ),
