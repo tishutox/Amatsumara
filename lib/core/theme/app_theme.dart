@@ -4,15 +4,15 @@ class AppTheme {
   const AppTheme._();
 
   static ThemeData light() {
-    const circusRed = Color(0xFFEF372C);
-    const circusBlue = Color(0xFF5860C3);
+    const primaryBlue = Color(0xFF5860C3);
+    const accentBlue = Color(0xFF454EA8);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: const ColorScheme.light(
-        primary: circusRed,
+        primary: primaryBlue,
         onPrimary: Colors.white,
-        secondary: circusBlue,
+        secondary: accentBlue,
         onSecondary: Colors.white,
         surface: Colors.white,
         onSurface: Color(0xFF231F20),

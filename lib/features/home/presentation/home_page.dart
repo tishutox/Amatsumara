@@ -65,7 +65,15 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    return const _LargeDiscoverContent();
+    return _LargeDiscoverContent(
+      bannerPaths: _bannerPaths,
+      pageController: _pageController,
+      currentBannerIndex: _currentBannerIndex,
+      onPageChanged: (index) {
+        setState(() => _currentBannerIndex = index);
+      },
+      onManualSlide: _startBannerTimer,
+    );
   }
 }
 
@@ -86,54 +94,18 @@ class _MobileDiscoverContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bannerHeight = MediaQuery.sizeOf(context).width * (500 / 1500);
-
     return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       children: [
-        SizedBox(
-          height: bannerHeight,
-          child: PageView.builder(
-            controller: pageController,
-            itemCount: bannerPaths.length,
-            onPageChanged: (index) {
-              onPageChanged(index);
-              onManualSlide();
-            },
-            itemBuilder: (context, index) {
-              return Image.asset(
-                bannerPaths[index],
-                fit: BoxFit.cover,
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List<Widget>.generate(
-              bannerPaths.length,
-              (index) {
-                final isActive = index == currentBannerIndex;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: isActive ? 18 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                );
-              },
-            ),
-          ),
+        _BannerCarouselWidget(
+          bannerPaths: bannerPaths,
+          pageController: pageController,
+          currentBannerIndex: currentBannerIndex,
+          onPageChanged: onPageChanged,
+          onManualSlide: onManualSlide,
+          maxWidth: double.infinity,
+          borderRadius: 22,
+          margin: EdgeInsets.zero,
         ),
         const SizedBox(height: 18),
         const Padding(
@@ -159,7 +131,19 @@ class _MobileDiscoverContent extends StatelessWidget {
 }
 
 class _LargeDiscoverContent extends StatelessWidget {
-  const _LargeDiscoverContent();
+  const _LargeDiscoverContent({
+    required this.bannerPaths,
+    required this.pageController,
+    required this.currentBannerIndex,
+    required this.onPageChanged,
+    required this.onManualSlide,
+  });
+
+  final List<String> bannerPaths;
+  final PageController pageController;
+  final int currentBannerIndex;
+  final ValueChanged<int> onPageChanged;
+  final VoidCallback onManualSlide;
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +158,16 @@ class _LargeDiscoverContent extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _BannerCarouselWidget(
+                    bannerPaths: bannerPaths,
+                    pageController: pageController,
+                    currentBannerIndex: currentBannerIndex,
+                    onPageChanged: onPageChanged,
+                    onManualSlide: onManualSlide,
+                    maxWidth: isExpanded ? 1160 : 920,
+                    borderRadius: 28,
+                    margin: const EdgeInsets.only(bottom: 22),
+                  ),
                   const _ComingSoonCard(
                     title: 'Discover for Tablet/Desktop Is In Progress',
                     description:
@@ -186,7 +180,7 @@ class _LargeDiscoverContent extends StatelessWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
-                    childAspectRatio: 2.4,
+                    childAspectRatio: isExpanded ? 2.0 : 1.8,
                     children: const [
                       _ComingSoonCard(
                         title: 'Section A',
@@ -212,6 +206,93 @@ class _LargeDiscoverContent extends StatelessWidget {
   }
 }
 
+class _BannerCarouselWidget extends StatelessWidget {
+  const _BannerCarouselWidget({
+    required this.bannerPaths,
+    required this.pageController,
+    required this.currentBannerIndex,
+    required this.onPageChanged,
+    required this.onManualSlide,
+    required this.maxWidth,
+    required this.borderRadius,
+    required this.margin,
+  });
+
+  final List<String> bannerPaths;
+  final PageController pageController;
+  final int currentBannerIndex;
+  final ValueChanged<int> onPageChanged;
+  final VoidCallback onManualSlide;
+  final double maxWidth;
+  final double borderRadius;
+  final EdgeInsets margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final bannerWidth = maxWidth == double.infinity
+        ? width - margin.horizontal
+        : maxWidth.clamp(0, width - margin.horizontal);
+    final bannerHeight = bannerWidth * (500 / 1500);
+
+    return Container(
+      margin: margin,
+      child: Column(
+        children: [
+          Container(
+            height: bannerHeight,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(borderRadius),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(borderRadius),
+              child: PageView.builder(
+                controller: pageController,
+                itemCount: bannerPaths.length,
+                onPageChanged: (index) {
+                  onPageChanged(index);
+                  onManualSlide();
+                },
+                itemBuilder: (context, index) {
+                  return Image.asset(
+                    bannerPaths[index],
+                    fit: BoxFit.cover,
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List<Widget>.generate(
+              bannerPaths.length,
+              (index) {
+                final isActive = index == currentBannerIndex;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: isActive ? 18 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.28),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ComingSoonCard extends StatelessWidget {
   const _ComingSoonCard({required this.title, required this.description});
 
@@ -224,6 +305,7 @@ class _ComingSoonCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -233,7 +315,11 @@ class _ComingSoonCard extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
-            Text(description),
+            Text(
+              description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),

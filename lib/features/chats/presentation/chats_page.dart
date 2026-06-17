@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-const _chatsColor = Color(0xFFEF372C);
+const _chatsColor = Color(0xFF5860C3);
 
 class ChatsPage extends StatelessWidget {
   const ChatsPage({super.key});
