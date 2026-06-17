@@ -6,7 +6,7 @@ class ApkUpdate {
 
   // Point this to your hosted release file (same file as the website download).
   static const String latestApkUrl =
-      'https://example.com/downloads/lumii-quest-android-v1.0.9.apk';
+      'https://example.com/downloads/lumii-quest-android-v1.0.10.apk';
 
   static Future<void> openLatestApk(BuildContext context) async {
     final uri = Uri.parse(latestApkUrl);

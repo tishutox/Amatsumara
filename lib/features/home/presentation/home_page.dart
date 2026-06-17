@@ -25,11 +25,53 @@ class _HomePageState extends State<HomePage> {
   final PageController _pageController = PageController();
   Timer? _bannerTimer;
   int _currentBannerIndex = 0;
+  List<double>? _bannerAspectRatios;
 
   @override
   void initState() {
     super.initState();
+    _loadBannerAspectRatios();
     _startBannerTimer();
+  }
+
+  Future<void> _loadBannerAspectRatios() async {
+    final ratios = <double>[];
+    for (final path in _bannerPaths) {
+      ratios.add(await _readAssetAspectRatio(path));
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() => _bannerAspectRatios = ratios);
+  }
+
+  Future<double> _readAssetAspectRatio(String assetPath) async {
+    final completer = Completer<ImageInfo>();
+    final image = AssetImage(assetPath);
+    final stream = image.resolve(const ImageConfiguration());
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener(
+      (info, _) {
+        if (!completer.isCompleted) {
+          completer.complete(info);
+        }
+        stream.removeListener(listener);
+      },
+      onError: (error, stackTrace) {
+        if (!completer.isCompleted) {
+          completer.completeError(error, stackTrace);
+        }
+        stream.removeListener(listener);
+      },
+    );
+    stream.addListener(listener);
+
+    try {
+      final info = await completer.future.timeout(const Duration(seconds: 2));
+      return info.image.width / info.image.height;
+    } catch (_) {
+      return 3.0;
+    }
   }
 
   @override
@@ -57,12 +99,18 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentAspectRatio =
+        (_bannerAspectRatios != null && _bannerAspectRatios!.length == _bannerPaths.length)
+            ? _bannerAspectRatios![_currentBannerIndex.clamp(0, _bannerPaths.length - 1)]
+            : 3.0;
+
     final isMobile = MediaQuery.sizeOf(context).width < Breakpoints.compact;
     if (isMobile) {
       return _MobileDiscoverContent(
         bannerPaths: _bannerPaths,
         pageController: _pageController,
         currentBannerIndex: _currentBannerIndex,
+        bannerAspectRatio: currentAspectRatio,
         navIconColor: widget.navIconColor,
         onPageChanged: (index) {
           setState(() => _currentBannerIndex = index);
@@ -75,6 +123,7 @@ class _HomePageState extends State<HomePage> {
       bannerPaths: _bannerPaths,
       pageController: _pageController,
       currentBannerIndex: _currentBannerIndex,
+      bannerAspectRatio: currentAspectRatio,
       navIconColor: widget.navIconColor,
       onPageChanged: (index) {
         setState(() => _currentBannerIndex = index);
@@ -89,6 +138,7 @@ class _MobileDiscoverContent extends StatelessWidget {
     required this.bannerPaths,
     required this.pageController,
     required this.currentBannerIndex,
+    required this.bannerAspectRatio,
     required this.navIconColor,
     required this.onPageChanged,
     required this.onManualSlide,
@@ -97,6 +147,7 @@ class _MobileDiscoverContent extends StatelessWidget {
   final List<String> bannerPaths;
   final PageController pageController;
   final int currentBannerIndex;
+  final double bannerAspectRatio;
   final Color navIconColor;
   final ValueChanged<int> onPageChanged;
   final VoidCallback onManualSlide;
@@ -110,10 +161,10 @@ class _MobileDiscoverContent extends StatelessWidget {
           bannerPaths: bannerPaths,
           pageController: pageController,
           currentBannerIndex: currentBannerIndex,
+          bannerAspectRatio: bannerAspectRatio,
           navIconColor: navIconColor,
           onPageChanged: onPageChanged,
           onManualSlide: onManualSlide,
-          maxWidth: double.infinity,
           borderRadius: 22,
           margin: EdgeInsets.zero,
         ),
@@ -142,6 +193,7 @@ class _LargeDiscoverContent extends StatelessWidget {
     required this.bannerPaths,
     required this.pageController,
     required this.currentBannerIndex,
+    required this.bannerAspectRatio,
     required this.navIconColor,
     required this.onPageChanged,
     required this.onManualSlide,
@@ -150,6 +202,7 @@ class _LargeDiscoverContent extends StatelessWidget {
   final List<String> bannerPaths;
   final PageController pageController;
   final int currentBannerIndex;
+  final double bannerAspectRatio;
   final Color navIconColor;
   final ValueChanged<int> onPageChanged;
   final VoidCallback onManualSlide;
@@ -168,10 +221,10 @@ class _LargeDiscoverContent extends StatelessWidget {
                 bannerPaths: bannerPaths,
                 pageController: pageController,
                 currentBannerIndex: currentBannerIndex,
+                bannerAspectRatio: bannerAspectRatio,
                 navIconColor: navIconColor,
                 onPageChanged: onPageChanged,
                 onManualSlide: onManualSlide,
-                maxWidth: double.infinity,
                 borderRadius: 28,
                 margin: const EdgeInsets.only(bottom: 22),
               ),
@@ -216,10 +269,10 @@ class _BannerCarouselWidget extends StatelessWidget {
     required this.bannerPaths,
     required this.pageController,
     required this.currentBannerIndex,
+    required this.bannerAspectRatio,
     required this.navIconColor,
     required this.onPageChanged,
     required this.onManualSlide,
-    required this.maxWidth,
     required this.borderRadius,
     required this.margin,
   });
@@ -227,30 +280,21 @@ class _BannerCarouselWidget extends StatelessWidget {
   final List<String> bannerPaths;
   final PageController pageController;
   final int currentBannerIndex;
+  final double bannerAspectRatio;
   final Color navIconColor;
   final ValueChanged<int> onPageChanged;
   final VoidCallback onManualSlide;
-  final double maxWidth;
   final double borderRadius;
   final EdgeInsets margin;
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final bannerWidth = maxWidth == double.infinity
-        ? width - margin.horizontal
-        : maxWidth.clamp(0, width - margin.horizontal);
-    final bannerHeight = bannerWidth * (500 / 1500);
-
     return Container(
       margin: margin,
       child: Column(
         children: [
-          Container(
-            height: bannerHeight,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(borderRadius),
-            ),
+          AspectRatio(
+            aspectRatio: bannerAspectRatio,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(borderRadius),
               child: PageView.builder(
@@ -261,12 +305,9 @@ class _BannerCarouselWidget extends StatelessWidget {
                   onManualSlide();
                 },
                 itemBuilder: (context, index) {
-                  return ColoredBox(
-                    color: Theme.of(context).colorScheme.surface,
-                    child: Image.asset(
-                      bannerPaths[index],
-                      fit: BoxFit.contain,
-                    ),
+                  return Image.asset(
+                    bannerPaths[index],
+                    fit: BoxFit.contain,
                   );
                 },
               ),
