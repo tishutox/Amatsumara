@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
 import 'package:lumii_quest/core/update/apk_update.dart';
 import 'package:lumii_quest/features/chats/presentation/chats_page.dart';
@@ -34,6 +36,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   static const String _colorModePrefKey = 'system_color_mode';
+  static const double _maxContentWidth = 1160;
 
   int _currentIndex = 0;
   int? _hoveredCompactIndex;
@@ -188,17 +191,20 @@ class _AppShellState extends State<AppShell> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Remix.palette_line,
-                    size: 16,
-                    color: navColor,
-                  ),
-                  const SizedBox(width: 6),
                   DropdownButtonHideUnderline(
                     child: DropdownButton<SystemColorMode>(
                       value: _colorMode,
                       borderRadius: BorderRadius.circular(12),
                       dropdownColor: backgroundColor,
+                      // Uses the same s-line family shape as arrow-down-s-line.
+                      icon: Transform.rotate(
+                        angle: math.pi,
+                        child: Icon(
+                          Remix.arrow_up_s_line,
+                          color: navColor,
+                          size: 18,
+                        ),
+                      ),
                       iconEnabledColor: navColor,
                       style: TextStyle(
                         color: navColor,
@@ -258,11 +264,17 @@ class _AppShellState extends State<AppShell> {
               ),
             ),
           Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child: KeyedSubtree(
-                key: ValueKey<int>(_currentIndex),
-                child: pages[_currentIndex],
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: KeyedSubtree(
+                    key: ValueKey<int>(_currentIndex),
+                    child: pages[_currentIndex],
+                  ),
+                ),
               ),
             ),
           ),

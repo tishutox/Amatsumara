@@ -118,17 +118,14 @@ class _MobileDiscoverContent extends StatelessWidget {
           margin: EdgeInsets.zero,
         ),
         const SizedBox(height: 18),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: _ComingSoonCard(
-            title: 'Discover Content Coming Soon',
-            description:
-                'This area is prepared as a placeholder. The final Discover content will be added next.',
-          ),
+        const _ComingSoonCard(
+          title: 'Discover Content Coming Soon',
+          description:
+              'This area is prepared as a placeholder. The final Discover content will be added next.',
         ),
         const SizedBox(height: 14),
         const Padding(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+          padding: EdgeInsets.only(bottom: 24),
           child: _ComingSoonCard(
             title: 'Additional Modules',
             description:
@@ -164,54 +161,49 @@ class _LargeDiscoverContent extends StatelessWidget {
         final isExpanded = constraints.maxWidth >= Breakpoints.expanded;
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: isExpanded ? 1220 : 980),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _BannerCarouselWidget(
-                    bannerPaths: bannerPaths,
-                    pageController: pageController,
-                    currentBannerIndex: currentBannerIndex,
-                    navIconColor: navIconColor,
-                    onPageChanged: onPageChanged,
-                    onManualSlide: onManualSlide,
-                    maxWidth: isExpanded ? 1160 : 920,
-                    borderRadius: 28,
-                    margin: const EdgeInsets.only(bottom: 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _BannerCarouselWidget(
+                bannerPaths: bannerPaths,
+                pageController: pageController,
+                currentBannerIndex: currentBannerIndex,
+                navIconColor: navIconColor,
+                onPageChanged: onPageChanged,
+                onManualSlide: onManualSlide,
+                maxWidth: double.infinity,
+                borderRadius: 28,
+                margin: const EdgeInsets.only(bottom: 22),
+              ),
+              const _ComingSoonCard(
+                title: 'Discover for Tablet/Desktop Is In Progress',
+                description:
+                    'The mobile banner experience is already in place. This layout is a prepared area for the new Discover structure.',
+              ),
+              const SizedBox(height: 18),
+              GridView.count(
+                crossAxisCount: isExpanded ? 3 : 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: isExpanded ? 2.0 : 1.8,
+                children: const [
+                  _ComingSoonCard(
+                    title: 'Section A',
+                    description: 'Reserved space for curated content.',
                   ),
-                  const _ComingSoonCard(
-                    title: 'Discover for Tablet/Desktop Is In Progress',
-                    description:
-                        'The mobile banner experience is already in place. This layout is a prepared area for the new Discover structure.',
+                  _ComingSoonCard(
+                    title: 'Section B',
+                    description: 'Reserved space for recommendations.',
                   ),
-                  const SizedBox(height: 18),
-                  GridView.count(
-                    crossAxisCount: isExpanded ? 3 : 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 14,
-                    childAspectRatio: isExpanded ? 2.0 : 1.8,
-                    children: const [
-                      _ComingSoonCard(
-                        title: 'Section A',
-                        description: 'Reserved space for curated content.',
-                      ),
-                      _ComingSoonCard(
-                        title: 'Section B',
-                        description: 'Reserved space for recommendations.',
-                      ),
-                      _ComingSoonCard(
-                        title: 'Section C',
-                        description: 'Reserved space for campaigns and highlights.',
-                      ),
-                    ],
+                  _ComingSoonCard(
+                    title: 'Section C',
+                    description: 'Reserved space for campaigns and highlights.',
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         );
       },
