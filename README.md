@@ -36,6 +36,14 @@ flutter pub get
 flutter run
 ```
 
+Supabase is configured at runtime so client configuration is not committed:
+
+```powershell
+flutter run -d windows `
+  --dart-define=SUPABASE_URL=https://lclcpnecbejxzbbzygwt.supabase.co `
+  --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+```
+
 ## Run By Platform
 
 ```bash

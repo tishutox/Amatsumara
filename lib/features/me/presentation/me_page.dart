@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:remixicon/remixicon.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _usernamePattern = RegExp(r'^[A-Za-z0-9._-]+$');
 
@@ -27,6 +30,8 @@ class _MePageState extends State<MePage> {
   _AuthMode _mode = _AuthMode.signUp;
   DateTime? _birthday;
   String? _country;
+  bool _isSubmitting = false;
+  late final StreamSubscription<AuthState> _authSubscription;
 
   static const _countries = <String>[
     'Albania',
@@ -39,7 +44,20 @@ class _MePageState extends State<MePage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      _,
+    ) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _authSubscription.cancel();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -73,15 +91,68 @@ class _MePageState extends State<MePage> {
     });
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final action = _mode == _AuthMode.signUp ? 'Sign up' : 'Sign in';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$action is ready for backend integration.')),
-    );
+    setState(() => _isSubmitting = true);
+    final auth = Supabase.instance.client.auth;
+
+    try {
+      if (_mode == _AuthMode.signUp) {
+        final response = await auth.signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          data: {
+            'first_name': _firstNameController.text.trim(),
+            'last_name': _lastNameController.text.trim(),
+            'display_name': _displayNameController.text.trim(),
+            'username': _usernameController.text.trim(),
+            'birthday': _birthday!.toIso8601String().split('T').first,
+            'country': _country,
+          },
+        );
+        if (!mounted) {
+          return;
+        }
+        final needsConfirmation = response.session == null;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              needsConfirmation
+                  ? 'Account created. Check your email to confirm it.'
+                  : 'Your account has been created.',
+            ),
+          ),
+        );
+      } else {
+        await auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Something went wrong. Try again.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Future<void> _signOut() async {
+    await Supabase.instance.client.auth.signOut();
   }
 
   void _showProfileImageHint() {
@@ -94,6 +165,11 @@ class _MePageState extends State<MePage> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      return _SignedInProfile(user: user, onSignOut: _signOut);
+    }
+
     final isSignUp = _mode == _AuthMode.signUp;
 
     return ListView(
@@ -167,13 +243,22 @@ class _MePageState extends State<MePage> {
                     ],
                     _ResponsiveFields(
                       children: [
-                        _AuthTextField(
-                          controller: _usernameController,
-                          label: 'Username',
-                          icon: Remix.account_circle_line,
-                          maxLength: 20,
-                          validator: _usernameValidator,
-                        ),
+                        if (isSignUp)
+                          _AuthTextField(
+                            controller: _usernameController,
+                            label: 'Username',
+                            icon: Remix.account_circle_line,
+                            maxLength: 20,
+                            validator: _usernameValidator,
+                          )
+                        else
+                          _AuthTextField(
+                            controller: _emailController,
+                            label: 'Email',
+                            icon: Remix.mail_line,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: _emailValidator,
+                          ),
                         _AuthTextField(
                           controller: _passwordController,
                           label: 'Password',
@@ -221,16 +306,83 @@ class _MePageState extends State<MePage> {
                     ],
                     const SizedBox(height: 22),
                     FilledButton.icon(
-                      onPressed: _submit,
+                      onPressed: _isSubmitting ? null : _submit,
                       icon: Icon(
-                        isSignUp
+                        _isSubmitting
+                            ? Icons.hourglass_top_rounded
+                            : isSignUp
                             ? Icons.person_add_alt_1_outlined
                             : Icons.login_outlined,
                       ),
-                      label: Text(isSignUp ? 'Create account' : 'Sign in'),
+                      label: Text(
+                        _isSubmitting
+                            ? 'Please wait...'
+                            : isSignUp
+                            ? 'Create account'
+                            : 'Sign in',
+                      ),
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SignedInProfile extends StatelessWidget {
+  const _SignedInProfile({required this.user, required this.onSignOut});
+
+  final User user;
+  final Future<void> Function() onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    final metadata = user.userMetadata ?? const <String, dynamic>{};
+    final displayName = metadata['display_name'] as String?;
+    final username = metadata['username'] as String?;
+
+    return ListView(
+      padding: ContentLayout.pagePadding,
+      children: [
+        ContentLayout.widthBox(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CircleAvatar(
+                    radius: 42,
+                    child: Text(
+                      (displayName ?? user.email ?? '?')[0].toUpperCase(),
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    displayName ?? 'Lumii Quest member',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  if (username != null) ...[
+                    const SizedBox(height: 4),
+                    Text('@$username', textAlign: TextAlign.center),
+                  ],
+                  const SizedBox(height: 4),
+                  Text(user.email ?? '', textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: onSignOut,
+                    icon: const Icon(Icons.logout_outlined),
+                    label: const Text('Sign out'),
+                  ),
+                ],
               ),
             ),
           ),
@@ -462,9 +614,6 @@ String? _passwordValidator(String? value) {
   final password = value!.trim();
   if (password.length < 8) {
     return 'Password needs at least 8 characters.';
-  }
-  if (!_usernamePattern.hasMatch(password)) {
-    return 'Use only A-Z, a-z, 0-9, -, _ and .';
   }
   return null;
 }
