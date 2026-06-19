@@ -44,6 +44,9 @@ flutter run -d windows `
   --dart-define=SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
+Before profile image uploads can be used, run
+`supabase/avatar_storage.sql` once in the Supabase SQL Editor.
+
 ## Run By Platform
 
 ```bash
