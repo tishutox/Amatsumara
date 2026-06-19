@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
+import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
@@ -32,43 +33,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadBannerAspectRatios() async {
-    final ratios = <double>[];
-    for (final path in _bannerPaths) {
-      ratios.add(await _readAssetAspectRatio(path));
-    }
+    final ratios = await Future.wait(_bannerPaths.map(_readAssetAspectRatio));
     if (!mounted) {
       return;
     }
     setState(() => _bannerAspectRatios = ratios);
   }
 
-  Future<double> _readAssetAspectRatio(String assetPath) async {
-    final completer = Completer<ImageInfo>();
-    final image = AssetImage(assetPath);
-    final stream = image.resolve(const ImageConfiguration());
+  Future<double> _readAssetAspectRatio(String assetPath) {
+    final completer = Completer<double>();
+    final stream = AssetImage(assetPath).resolve(const ImageConfiguration());
     late final ImageStreamListener listener;
     listener = ImageStreamListener(
       (info, _) {
-        if (!completer.isCompleted) {
-          completer.complete(info);
-        }
+        completer.complete(info.image.width / info.image.height);
         stream.removeListener(listener);
       },
-      onError: (error, stackTrace) {
-        if (!completer.isCompleted) {
-          completer.completeError(error, stackTrace);
-        }
+      onError: (_, _) {
+        completer.complete(3);
         stream.removeListener(listener);
       },
     );
     stream.addListener(listener);
-
-    try {
-      final info = await completer.future.timeout(const Duration(seconds: 2));
-      return info.image.width / info.image.height;
-    } catch (_) {
-      return 3.0;
-    }
+    return completer.future;
   }
 
   @override
@@ -96,22 +83,14 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentAspectRatio =
-        (_bannerAspectRatios != null &&
-            _bannerAspectRatios!.length == _bannerPaths.length)
-        ? _bannerAspectRatios![_currentBannerIndex.clamp(
-            0,
-            _bannerPaths.length - 1,
-          )]
-        : 3.0;
-
+    final bannerAspectRatio = _bannerAspectRatios?[_currentBannerIndex] ?? 3;
     final isMobile = MediaQuery.sizeOf(context).width < Breakpoints.compact;
     if (isMobile) {
       return _MobileDiscoverContent(
         bannerPaths: _bannerPaths,
         pageController: _pageController,
         currentBannerIndex: _currentBannerIndex,
-        bannerAspectRatio: currentAspectRatio,
+        bannerAspectRatio: bannerAspectRatio,
         navIconColor: widget.navIconColor,
         onPageChanged: (index) {
           setState(() => _currentBannerIndex = index);
@@ -124,7 +103,7 @@ class _HomePageState extends State<HomePage> {
       bannerPaths: _bannerPaths,
       pageController: _pageController,
       currentBannerIndex: _currentBannerIndex,
-      bannerAspectRatio: currentAspectRatio,
+      bannerAspectRatio: bannerAspectRatio,
       navIconColor: widget.navIconColor,
       onPageChanged: (index) {
         setState(() => _currentBannerIndex = index);
@@ -156,32 +135,38 @@ class _MobileDiscoverContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      padding: ContentLayout.pagePadding,
       children: [
-        _BannerCarouselWidget(
-          bannerPaths: bannerPaths,
-          pageController: pageController,
-          currentBannerIndex: currentBannerIndex,
-          bannerAspectRatio: bannerAspectRatio,
-          navIconColor: navIconColor,
-          onPageChanged: onPageChanged,
-          onManualSlide: onManualSlide,
-          borderRadius: 22,
-          margin: EdgeInsets.zero,
+        ContentLayout.widthBox(
+          child: _BannerCarouselWidget(
+            bannerPaths: bannerPaths,
+            pageController: pageController,
+            currentBannerIndex: currentBannerIndex,
+            bannerAspectRatio: bannerAspectRatio,
+            navIconColor: navIconColor,
+            onPageChanged: onPageChanged,
+            onManualSlide: onManualSlide,
+            borderRadius: 22,
+            margin: EdgeInsets.zero,
+          ),
         ),
         const SizedBox(height: 18),
-        const _ComingSoonCard(
-          title: 'Discover Content Coming Soon',
-          description:
-              'This area is prepared as a placeholder. The final Discover content will be added next.',
+        ContentLayout.widthBox(
+          child: const _ComingSoonCard(
+            title: 'Discover Content Coming Soon',
+            description:
+                'This area is prepared as a placeholder. The final Discover content will be added next.',
+          ),
         ),
         const SizedBox(height: 14),
-        const Padding(
-          padding: EdgeInsets.only(bottom: 24),
-          child: _ComingSoonCard(
-            title: 'Additional Modules',
-            description:
-                'More Discover sections will appear below the banner here.',
+        Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: ContentLayout.widthBox(
+            child: const _ComingSoonCard(
+              title: 'Additional Modules',
+              description:
+                  'More Discover sections will appear below the banner here.',
+            ),
           ),
         ),
       ],
@@ -214,50 +199,53 @@ class _LargeDiscoverContent extends StatelessWidget {
       builder: (context, constraints) {
         final isExpanded = constraints.maxWidth >= Breakpoints.expanded;
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _BannerCarouselWidget(
-                bannerPaths: bannerPaths,
-                pageController: pageController,
-                currentBannerIndex: currentBannerIndex,
-                bannerAspectRatio: bannerAspectRatio,
-                navIconColor: navIconColor,
-                onPageChanged: onPageChanged,
-                onManualSlide: onManualSlide,
-                borderRadius: 28,
-                margin: const EdgeInsets.only(bottom: 22),
-              ),
-              const _ComingSoonCard(
-                title: 'Discover for Tablet/Desktop Is In Progress',
-                description:
-                    'The mobile banner experience is already in place. This layout is a prepared area for the new Discover structure.',
-              ),
-              const SizedBox(height: 18),
-              GridView.count(
-                crossAxisCount: isExpanded ? 3 : 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: isExpanded ? 2.0 : 1.8,
-                children: const [
-                  _ComingSoonCard(
-                    title: 'Section A',
-                    description: 'Reserved space for curated content.',
-                  ),
-                  _ComingSoonCard(
-                    title: 'Section B',
-                    description: 'Reserved space for recommendations.',
-                  ),
-                  _ComingSoonCard(
-                    title: 'Section C',
-                    description: 'Reserved space for campaigns and highlights.',
-                  ),
-                ],
-              ),
-            ],
+          padding: ContentLayout.pagePadding,
+          child: ContentLayout.widthBox(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _BannerCarouselWidget(
+                  bannerPaths: bannerPaths,
+                  pageController: pageController,
+                  currentBannerIndex: currentBannerIndex,
+                  bannerAspectRatio: bannerAspectRatio,
+                  navIconColor: navIconColor,
+                  onPageChanged: onPageChanged,
+                  onManualSlide: onManualSlide,
+                  borderRadius: 28,
+                  margin: const EdgeInsets.only(bottom: 22),
+                ),
+                const _ComingSoonCard(
+                  title: 'Discover for Tablet/Desktop Is In Progress',
+                  description:
+                      'The mobile banner experience is already in place. This layout is a prepared area for the new Discover structure.',
+                ),
+                const SizedBox(height: 18),
+                GridView.count(
+                  crossAxisCount: isExpanded ? 3 : 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: isExpanded ? 2.0 : 1.8,
+                  children: const [
+                    _ComingSoonCard(
+                      title: 'Section A',
+                      description: 'Reserved space for curated content.',
+                    ),
+                    _ComingSoonCard(
+                      title: 'Section B',
+                      description: 'Reserved space for recommendations.',
+                    ),
+                    _ComingSoonCard(
+                      title: 'Section C',
+                      description:
+                          'Reserved space for campaigns and highlights.',
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -294,20 +282,28 @@ class _BannerCarouselWidget extends StatelessWidget {
       margin: margin,
       child: Column(
         children: [
-          AspectRatio(
-            aspectRatio: bannerAspectRatio,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(borderRadius),
-              child: PageView.builder(
-                controller: pageController,
-                itemCount: bannerPaths.length,
-                onPageChanged: (index) {
-                  onPageChanged(index);
-                  onManualSlide();
-                },
-                itemBuilder: (context, index) {
-                  return Image.asset(bannerPaths[index], fit: BoxFit.contain);
-                },
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            child: AspectRatio(
+              aspectRatio: bannerAspectRatio,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(borderRadius),
+                child: PageView.builder(
+                  controller: pageController,
+                  itemCount: bannerPaths.length,
+                  onPageChanged: (index) {
+                    onPageChanged(index);
+                    onManualSlide();
+                  },
+                  itemBuilder: (context, index) {
+                    return Image.asset(
+                      bannerPaths[index],
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                    );
+                  },
+                ),
               ),
             ),
           ),

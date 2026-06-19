@@ -1,7 +1,5 @@
+import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
-
-const _chatsColor = Color(0xFF5860C3);
-const _maxContentWidth = 1160.0;
 
 class ChatsPage extends StatelessWidget {
   const ChatsPage({super.key});
@@ -9,7 +7,7 @@ class ChatsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: ContentLayout.pagePadding,
       children: const [
         _ChatContentWidth(
           child: _ChatTile(
@@ -17,14 +15,14 @@ class ChatsPage extends StatelessWidget {
             lastMessage: 'Can you check the new post?',
           ),
         ),
-        SizedBox(height: 10),
+        ContentLayout.sectionGap,
         _ChatContentWidth(
           child: _ChatTile(
             name: 'Kai',
             lastMessage: 'I am working on the community guidelines right now.',
           ),
         ),
-        SizedBox(height: 10),
+        ContentLayout.sectionGap,
         _ChatContentWidth(
           child: _ChatTile(name: 'Mina', lastMessage: 'Voice chat tonight?'),
         ),
@@ -40,12 +38,7 @@ class _ChatContentWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _maxContentWidth),
-        child: SizedBox(width: double.infinity, child: child),
-      ),
-    );
+    return ContentLayout.widthBox(child: SizedBox(height: 86, child: child));
   }
 }
 
@@ -57,15 +50,16 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _chatsColor.withValues(alpha: 0.12),
-          child: const Icon(Icons.person_outline, color: _chatsColor),
+          backgroundColor: primary.withValues(alpha: 0.12),
+          child: Icon(Icons.person_outline, color: primary),
         ),
         title: Text(name),
         subtitle: Text(lastMessage),
-        trailing: const Icon(Icons.chevron_right, color: _chatsColor),
+        trailing: Icon(Icons.chevron_right, color: primary),
       ),
     );
   }

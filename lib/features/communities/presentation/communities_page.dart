@@ -1,13 +1,12 @@
+import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
-
-const _communitiesColor = Color(0xFF5860C3);
-const _maxContentWidth = 1160.0;
 
 class CommunitiesPage extends StatelessWidget {
   const CommunitiesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     final communities = <String>[
       'Anime & Manga',
       'Gaming Hub',
@@ -17,33 +16,26 @@ class CommunitiesPage extends StatelessWidget {
     ];
 
     return ListView.separated(
-      padding: const EdgeInsets.all(20),
+      padding: ContentLayout.pagePadding,
       itemCount: communities.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      separatorBuilder: (_, _) => ContentLayout.sectionGap,
       itemBuilder: (context, index) {
-        return Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _maxContentWidth),
-            child: SizedBox(
-              width: double.infinity,
-              child: Card(
+        return ContentLayout.widthBox(
+          child: SizedBox(
+            height: 86,
+            child: Card(
+              child: Center(
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: _communitiesColor.withValues(alpha: 0.15),
-                    child: const Icon(
-                      Icons.groups_2_outlined,
-                      color: _communitiesColor,
-                    ),
+                    backgroundColor: primary.withValues(alpha: 0.15),
+                    child: Icon(Icons.groups_2_outlined, color: primary),
                   ),
                   title: Text(communities[index]),
-                  subtitle: const Text(
+                  subtitle: Text(
                     '0 new posts',
-                    style: TextStyle(color: _communitiesColor),
+                    style: TextStyle(color: primary),
                   ),
-                  trailing: const Icon(
-                    Icons.chevron_right,
-                    color: _communitiesColor,
-                  ),
+                  trailing: Icon(Icons.chevron_right, color: primary),
                 ),
               ),
             ),

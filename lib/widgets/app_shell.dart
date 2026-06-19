@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
+import 'package:lumii_quest/core/theme/app_theme.dart';
 import 'package:lumii_quest/core/update/apk_update.dart';
 import 'package:lumii_quest/features/chats/presentation/chats_page.dart';
 import 'package:lumii_quest/features/communities/presentation/communities_page.dart';
@@ -10,21 +11,18 @@ import 'package:flutter/material.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum SystemColorMode {
-  light,
-  dark,
-  hellaverse,
-  glitch,
-}
+enum SystemColorMode { light, dark, hellaverse, glitch }
 
 class _SystemPalette {
   const _SystemPalette({
     required this.navColor,
     required this.backgroundColor,
+    required this.brightness,
   });
 
   final Color navColor;
   final Color backgroundColor;
+  final Brightness brightness;
 }
 
 class AppShell extends StatefulWidget {
@@ -62,18 +60,22 @@ class _AppShellState extends State<AppShell> {
     SystemColorMode.light: _SystemPalette(
       navColor: Color(0xFF5860C3),
       backgroundColor: Color(0xFFFFFFFF),
+      brightness: Brightness.light,
     ),
     SystemColorMode.dark: _SystemPalette(
       navColor: Color(0xFF5860C3),
       backgroundColor: Color(0xFF121212),
+      brightness: Brightness.dark,
     ),
     SystemColorMode.hellaverse: _SystemPalette(
       navColor: Color(0xFFF90142),
       backgroundColor: Color(0xFF121212),
+      brightness: Brightness.dark,
     ),
     SystemColorMode.glitch: _SystemPalette(
       navColor: Color(0xFFDB5DC9),
       backgroundColor: Color(0xFF121212),
+      brightness: Brightness.dark,
     ),
   };
 
@@ -150,7 +152,9 @@ class _AppShellState extends State<AppShell> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: const Duration(seconds: 4),
-          content: const Text('A new version is available. Download the APK directly.'),
+          content: const Text(
+            'A new version is available. Download the APK directly.',
+          ),
           action: SnackBarAction(
             label: 'Download',
             onPressed: () => ApkUpdate.openLatestApk(context),
@@ -169,155 +173,177 @@ class _AppShellState extends State<AppShell> {
     final navColor = palette.navColor;
     final backgroundColor = palette.backgroundColor;
     final pages = _buildPages(navColor);
+    final theme = AppTheme.system(
+      primary: navColor,
+      background: backgroundColor,
+      brightness: palette.brightness,
+    );
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        foregroundColor: navColor,
+    return Theme(
+      data: theme,
+      child: Scaffold(
         backgroundColor: backgroundColor,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(top: 6, right: 18, bottom: 6),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: navColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: navColor.withValues(alpha: 0.24)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonHideUnderline(
-                    child: DropdownButton<SystemColorMode>(
-                      value: _colorMode,
-                      borderRadius: BorderRadius.circular(12),
-                      dropdownColor: backgroundColor,
-                      // Uses the same s-line family shape as arrow-down-s-line.
-                      icon: Transform.rotate(
-                        angle: math.pi,
-                        child: Icon(
-                          Remix.arrow_up_s_line,
+        appBar: AppBar(
+          title: Text(_titles[_currentIndex]),
+          foregroundColor: navColor,
+          backgroundColor: backgroundColor,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 18, bottom: 6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: navColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: navColor.withValues(alpha: 0.24)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonHideUnderline(
+                      child: DropdownButton<SystemColorMode>(
+                        value: _colorMode,
+                        borderRadius: BorderRadius.circular(12),
+                        dropdownColor: backgroundColor,
+                        // Uses the same s-line family shape as arrow-down-s-line.
+                        icon: Transform.rotate(
+                          angle: math.pi,
+                          child: Icon(
+                            Remix.arrow_up_s_line,
+                            color: navColor,
+                            size: 18,
+                          ),
+                        ),
+                        iconEnabledColor: navColor,
+                        style: TextStyle(
                           color: navColor,
-                          size: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        onChanged: (value) {
+                          if (value == null) {
+                            return;
+                          }
+                          _setColorMode(value);
+                        },
+                        items: SystemColorMode.values
+                            .map(
+                              (mode) => DropdownMenuItem<SystemColorMode>(
+                                value: mode,
+                                child: Text(_modeLabel(mode)),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: Row(
+          children: [
+            if (!isCompact)
+              Theme(
+                data: Theme.of(context).copyWith(
+                  hoverColor: navColor.withValues(alpha: 0.10),
+                  splashColor: navColor.withValues(alpha: 0.14),
+                  highlightColor: navColor.withValues(alpha: 0.08),
+                ),
+                child: NavigationRail(
+                  backgroundColor: backgroundColor,
+                  selectedIndex: _currentIndex,
+                  extended: isExpanded,
+                  useIndicator: true,
+                  indicatorColor: navColor.withValues(alpha: 0.16),
+                  onDestinationSelected: (index) {
+                    setState(() => _currentIndex = index);
+                  },
+                  destinations: List<NavigationRailDestination>.generate(
+                    _labels.length,
+                    (index) => NavigationRailDestination(
+                      icon: Icon(
+                        _lineIcons[index],
+                        color: navColor.withValues(alpha: 0.72),
+                      ),
+                      selectedIcon: Icon(_fillIcons[index], color: navColor),
+                      label: Text(
+                        _labels[index],
+                        style: TextStyle(color: navColor),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Expanded(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    child: KeyedSubtree(
+                      key: ValueKey<int>(_currentIndex),
+                      child: pages[_currentIndex],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: isCompact
+            ? Theme(
+                data: Theme.of(context).copyWith(
+                  hoverColor: navColor.withValues(alpha: 0.10),
+                  splashColor: navColor.withValues(alpha: 0.14),
+                  highlightColor: navColor.withValues(alpha: 0.08),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      border: Border(
+                        top: BorderSide(
+                          color: navColor.withValues(alpha: 0.24),
                         ),
                       ),
-                      iconEnabledColor: navColor,
-                      style: TextStyle(
-                        color: navColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      onChanged: (value) {
-                        if (value == null) {
-                          return;
-                        }
-                        _setColorMode(value);
-                      },
-                      items: SystemColorMode.values
-                          .map(
-                            (mode) => DropdownMenuItem<SystemColorMode>(
-                              value: mode,
-                              child: Text(_modeLabel(mode)),
-                            ),
-                          )
-                          .toList(),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: Row(
-        children: [
-          if (!isCompact)
-            Theme(
-              data: Theme.of(context).copyWith(
-                hoverColor: navColor.withValues(alpha: 0.10),
-                splashColor: navColor.withValues(alpha: 0.14),
-                highlightColor: navColor.withValues(alpha: 0.08),
-              ),
-              child: NavigationRail(
-                backgroundColor: backgroundColor,
-                selectedIndex: _currentIndex,
-                extended: isExpanded,
-                useIndicator: true,
-                indicatorColor: navColor.withValues(alpha: 0.16),
-                onDestinationSelected: (index) {
-                  setState(() => _currentIndex = index);
-                },
-                destinations: List<NavigationRailDestination>.generate(
-                  _labels.length,
-                  (index) => NavigationRailDestination(
-                    icon: Icon(_lineIcons[index], color: navColor.withValues(alpha: 0.72)),
-                    selectedIcon: Icon(_fillIcons[index], color: navColor),
-                    label: Text(
-                      _labels[index],
-                      style: TextStyle(color: navColor),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _maxContentWidth),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: KeyedSubtree(
-                    key: ValueKey<int>(_currentIndex),
-                    child: pages[_currentIndex],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: isCompact
-          ? Theme(
-              data: Theme.of(context).copyWith(
-                hoverColor: navColor.withValues(alpha: 0.10),
-                splashColor: navColor.withValues(alpha: 0.14),
-                highlightColor: navColor.withValues(alpha: 0.08),
-              ),
-              child: SafeArea(
-                top: false,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    border: Border(top: BorderSide(color: navColor.withValues(alpha: 0.24))),
-                  ),
-                  child: Row(
-                    children: List<Widget>.generate(
-                      _labels.length,
-                      (index) {
+                    child: Row(
+                      children: List<Widget>.generate(_labels.length, (index) {
                         final isSelected = _currentIndex == index;
                         final isHovered = _hoveredCompactIndex == index;
                         return Expanded(
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
-                            overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                              (states) {
-                                if (states.contains(WidgetState.pressed)) {
-                                  return navColor.withValues(alpha: 0.18);
-                                }
-                                if (states.contains(WidgetState.hovered)) {
-                                  return navColor.withValues(alpha: 0.10);
-                                }
-                                return null;
-                              },
-                            ),
+                            overlayColor:
+                                WidgetStateProperty.resolveWith<Color?>((
+                                  states,
+                                ) {
+                                  if (states.contains(WidgetState.pressed)) {
+                                    return navColor.withValues(alpha: 0.18);
+                                  }
+                                  if (states.contains(WidgetState.hovered)) {
+                                    return navColor.withValues(alpha: 0.10);
+                                  }
+                                  return null;
+                                }),
                             onTap: () => setState(() => _currentIndex = index),
                             onHover: (value) {
-                              setState(() => _hoveredCompactIndex = value ? index : null);
+                              setState(
+                                () =>
+                                    _hoveredCompactIndex = value ? index : null,
+                              );
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
@@ -328,29 +354,33 @@ class _AppShellState extends State<AppShell> {
                                 color: isSelected
                                     ? navColor.withValues(alpha: 0.16)
                                     : isHovered
-                                        ? navColor.withValues(alpha: 0.10)
-                                        : Colors.transparent,
+                                    ? navColor.withValues(alpha: 0.10)
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    isSelected ? _fillIcons[index] : _lineIcons[index],
-                                    color: isSelected ? navColor : navColor.withValues(alpha: 0.72),
+                                    isSelected
+                                        ? _fillIcons[index]
+                                        : _lineIcons[index],
+                                    color: isSelected
+                                        ? navColor
+                                        : navColor.withValues(alpha: 0.72),
                                   ),
                                 ],
                               ),
                             ),
                           ),
                         );
-                      },
+                      }),
                     ),
                   ),
                 ),
-              ),
-            )
-          : null,
+              )
+            : null,
+      ),
     );
   }
 }
