@@ -1,6 +1,7 @@
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:remixicon/remixicon.dart';
 
 final _usernamePattern = RegExp(r'^[A-Za-z0-9._-]+$');
 
@@ -56,6 +57,7 @@ class _MePageState extends State<MePage> {
       initialDate: _birthday ?? DateTime(now.year - 18, now.month, now.day),
       firstDate: DateTime(now.year - 120),
       lastDate: now,
+      switchToInputEntryModeIcon: const Icon(Remix.pencil_line),
     );
 
     if (selected == null) {
@@ -126,7 +128,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _firstNameController,
                             label: 'First name',
-                            icon: Icons.badge_outlined,
+                            icon: Remix.profile_line,
                             maxLength: 30,
                             validator: (value) =>
                                 _requiredMax(value, 'First name', 30),
@@ -134,7 +136,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _lastNameController,
                             label: 'Last name',
-                            icon: Icons.badge_outlined,
+                            icon: Remix.profile_line,
                             maxLength: 30,
                             validator: (value) =>
                                 _requiredMax(value, 'Last name', 30),
@@ -147,7 +149,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _displayNameController,
                             label: 'Display name',
-                            icon: Icons.account_circle_outlined,
+                            icon: Remix.user_line,
                             maxLength: 20,
                             validator: (value) =>
                                 _requiredMax(value, 'Display name', 20),
@@ -155,7 +157,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _emailController,
                             label: 'Email',
-                            icon: Icons.alternate_email_outlined,
+                            icon: Remix.mail_line,
                             keyboardType: TextInputType.emailAddress,
                             validator: _emailValidator,
                           ),
@@ -168,14 +170,14 @@ class _MePageState extends State<MePage> {
                         _AuthTextField(
                           controller: _usernameController,
                           label: 'Username',
-                          icon: Icons.person_outline,
+                          icon: Remix.account_circle_line,
                           maxLength: 20,
                           validator: _usernameValidator,
                         ),
                         _AuthTextField(
                           controller: _passwordController,
                           label: 'Password',
-                          icon: Icons.lock_outline,
+                          icon: Remix.lock_2_line,
                           obscureText: true,
                           validator: _passwordValidator,
                         ),
@@ -188,7 +190,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _birthdayController,
                             label: 'Birthday',
-                            icon: Icons.cake_outlined,
+                            icon: Remix.cake_line,
                             readOnly: true,
                             onTap: _pickBirthday,
                             validator: (value) => _required(value, 'Birthday'),
@@ -197,7 +199,7 @@ class _MePageState extends State<MePage> {
                             initialValue: _country,
                             decoration: _fieldDecoration(
                               label: 'Country',
-                              icon: Icons.public_outlined,
+                              icon: Remix.earth_line,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             items: _countries
@@ -308,12 +310,12 @@ class _ProfileImagePicker extends StatelessWidget {
         CircleAvatar(
           radius: 40,
           backgroundColor: primary.withValues(alpha: 0.14),
-          child: Icon(Icons.add_a_photo_outlined, color: primary, size: 30),
+          child: Icon(Remix.camera_line, color: primary, size: 30),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.image_outlined),
+          icon: const Icon(Remix.camera_line),
           label: const Text('Profile image'),
         ),
       ],

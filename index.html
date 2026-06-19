@@ -202,14 +202,15 @@
       <ul class="facts">
         <li><strong>Release:</strong> <span id="apkRelease">v1.0.10+11</span></li>
         <li><strong>File size:</strong> <span id="apkSize">49.4 MB</span></li>
-        <li><strong>Build time:</strong> <span id="apkBuildTime">2026-06-19 20:26</span></li>
+        <li><strong>Build time:</strong> <span id="apkBuildTime">2026-06-19 21:15</span></li>
       </ul>
     </section>
 
     <section class="panel" aria-label="Changelog">
       <h2>Changelog</h2>
       <ul class="changelog">
-        <li id="apkChangelogEntry">Release v1.0.10+11 with the latest Android APK.</li>
+        <li id="apkChangelogEntry">Release v1.0.10+11 with the latest Android APK and Windows ZIP.</li>
+        <li>Me form fields and profile image controls now use the requested RemixIcon line icons.</li>
         <li>Navbar is now consistently blue-lilac (#5860c3) on all devices.</li>
         <li>The active tab once again has a visible background surface.</li>
         <li>Mobile navigation now shows icons only without labels.</li>
@@ -226,7 +227,7 @@
       version: '1.0.10+11',
       fileName: 'lumii-quest-android-v1.0.10.apk',
       fileSize: '49.4 MB',
-      buildTime: '2026-06-19 20:26'
+      buildTime: '2026-06-19 21:15'
     };
 
     const latestWindows = {
@@ -279,7 +280,7 @@
       apkRelease.textContent = `v${latestApk.version}`;
       apkSize.textContent = latestApk.fileSize;
       apkBuildTime.textContent = latestApk.buildTime;
-      apkChangelogEntry.textContent = `Release v${latestApk.version} with the latest Android APK.`;
+      apkChangelogEntry.textContent = `Release v${latestApk.version} with the latest Android APK and Windows ZIP.`;
     }
 
     function applyMode(modeName) {
