@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 const _chatsColor = Color(0xFF5860C3);
+const _maxContentWidth = 1160.0;
 
 class ChatsPage extends StatelessWidget {
   const ChatsPage({super.key});
@@ -10,12 +11,40 @@ class ChatsPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: const [
-        _ChatTile(name: 'Lena', lastMessage: 'Can you check the new post?'),
+        _ChatContentWidth(
+          child: _ChatTile(
+            name: 'Lena',
+            lastMessage: 'Can you check the new post?',
+          ),
+        ),
         SizedBox(height: 10),
-        _ChatTile(name: 'Kai', lastMessage: 'I am working on the community guidelines right now.'),
+        _ChatContentWidth(
+          child: _ChatTile(
+            name: 'Kai',
+            lastMessage: 'I am working on the community guidelines right now.',
+          ),
+        ),
         SizedBox(height: 10),
-        _ChatTile(name: 'Mina', lastMessage: 'Voice chat tonight?'),
+        _ChatContentWidth(
+          child: _ChatTile(name: 'Mina', lastMessage: 'Voice chat tonight?'),
+        ),
       ],
+    );
+  }
+}
+
+class _ChatContentWidth extends StatelessWidget {
+  const _ChatContentWidth({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+        child: SizedBox(width: double.infinity, child: child),
+      ),
     );
   }
 }

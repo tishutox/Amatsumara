@@ -4,10 +4,7 @@ import 'package:lumii_quest/core/responsive/breakpoints.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({
-    super.key,
-    required this.navIconColor,
-  });
+  const HomePage({super.key, required this.navIconColor});
 
   final Color navIconColor;
 
@@ -100,9 +97,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final currentAspectRatio =
-        (_bannerAspectRatios != null && _bannerAspectRatios!.length == _bannerPaths.length)
-            ? _bannerAspectRatios![_currentBannerIndex.clamp(0, _bannerPaths.length - 1)]
-            : 3.0;
+        (_bannerAspectRatios != null &&
+            _bannerAspectRatios!.length == _bannerPaths.length)
+        ? _bannerAspectRatios![_currentBannerIndex.clamp(
+            0,
+            _bannerPaths.length - 1,
+          )]
+        : 3.0;
 
     final isMobile = MediaQuery.sizeOf(context).width < Breakpoints.compact;
     if (isMobile) {
@@ -155,7 +156,7 @@ class _MobileDiscoverContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
       children: [
         _BannerCarouselWidget(
           bannerPaths: bannerPaths,
@@ -305,10 +306,7 @@ class _BannerCarouselWidget extends StatelessWidget {
                   onManualSlide();
                 },
                 itemBuilder: (context, index) {
-                  return Image.asset(
-                    bannerPaths[index],
-                    fit: BoxFit.contain,
-                  );
+                  return Image.asset(bannerPaths[index], fit: BoxFit.contain);
                 },
               ),
             ),
@@ -316,24 +314,21 @@ class _BannerCarouselWidget extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List<Widget>.generate(
-              bannerPaths.length,
-              (index) {
-                final isActive = index == currentBannerIndex;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: isActive ? 18 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? navIconColor
-                        : navIconColor.withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                );
-              },
-            ),
+            children: List<Widget>.generate(bannerPaths.length, (index) {
+              final isActive = index == currentBannerIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: isActive ? 18 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? navIconColor
+                      : navIconColor.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              );
+            }),
           ),
         ],
       ),
@@ -358,16 +353,12 @@ class _ComingSoonCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            Text(
-              description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(description, maxLines: 2, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),

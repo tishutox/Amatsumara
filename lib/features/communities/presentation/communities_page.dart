@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 const _communitiesColor = Color(0xFF5860C3);
+const _maxContentWidth = 1160.0;
 
 class CommunitiesPage extends StatelessWidget {
   const CommunitiesPage({super.key});
@@ -20,15 +21,32 @@ class CommunitiesPage extends StatelessWidget {
       itemCount: communities.length,
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: _communitiesColor.withValues(alpha: 0.15),
-              child: const Icon(Icons.groups_2_outlined, color: _communitiesColor),
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _maxContentWidth),
+            child: SizedBox(
+              width: double.infinity,
+              child: Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _communitiesColor.withValues(alpha: 0.15),
+                    child: const Icon(
+                      Icons.groups_2_outlined,
+                      color: _communitiesColor,
+                    ),
+                  ),
+                  title: Text(communities[index]),
+                  subtitle: const Text(
+                    '0 new posts',
+                    style: TextStyle(color: _communitiesColor),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: _communitiesColor,
+                  ),
+                ),
+              ),
             ),
-            title: Text(communities[index]),
-            subtitle: const Text('0 new posts', style: TextStyle(color: _communitiesColor)),
-            trailing: const Icon(Icons.chevron_right, color: _communitiesColor),
           ),
         );
       },
