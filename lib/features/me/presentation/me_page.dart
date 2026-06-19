@@ -1,8 +1,8 @@
 import 'dart:async';
-
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -31,6 +31,7 @@ class _MePageState extends State<MePage> {
   DateTime? _birthday;
   String? _country;
   bool _isSubmitting = false;
+  bool _isUploadingAvatar = false;
   late final StreamSubscription<AuthState> _authSubscription;
 
   static const _countries = <String>[
@@ -155,10 +156,87 @@ class _MePageState extends State<MePage> {
     await Supabase.instance.client.auth.signOut();
   }
 
+  Future<void> _pickAndUploadAvatar() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null || _isUploadingAvatar) {
+      return;
+    }
+
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (image == null || !mounted) {
+      return;
+    }
+
+    setState(() => _isUploadingAvatar = true);
+    try {
+      final bytes = await image.readAsBytes();
+      if (bytes.lengthInBytes > 5 * 1024 * 1024) {
+        throw const FormatException('The image must be smaller than 5 MB.');
+      }
+
+      final extension = _imageExtension(image.name);
+      final path = '${user.id}/avatar.$extension';
+      final storage = Supabase.instance.client.storage.from('avatars');
+      await storage.uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(
+          upsert: true,
+          contentType: _imageContentType(extension),
+          cacheControl: '3600',
+        ),
+      );
+
+      final publicUrl = storage.getPublicUrl(path);
+      final avatarUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'avatar_url': avatarUrl}),
+      );
+
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile image saved.')));
+      }
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } on StorageException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The profile image could not be saved.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+      }
+    }
+  }
+
   void _showProfileImageHint() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Profile image upload will be connected with storage.'),
+        content: Text(
+          'You can add a profile image after creating the account.',
+        ),
       ),
     );
   }
@@ -167,7 +245,12 @@ class _MePageState extends State<MePage> {
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      return _SignedInProfile(user: user, onSignOut: _signOut);
+      return _SignedInProfile(
+        user: user,
+        isUploadingAvatar: _isUploadingAvatar,
+        onChangeAvatar: _pickAndUploadAvatar,
+        onSignOut: _signOut,
+      );
     }
 
     final isSignUp = _mode == _AuthMode.signUp;
@@ -334,9 +417,16 @@ class _MePageState extends State<MePage> {
 }
 
 class _SignedInProfile extends StatelessWidget {
-  const _SignedInProfile({required this.user, required this.onSignOut});
+  const _SignedInProfile({
+    required this.user,
+    required this.isUploadingAvatar,
+    required this.onChangeAvatar,
+    required this.onSignOut,
+  });
 
   final User user;
+  final bool isUploadingAvatar;
+  final Future<void> Function() onChangeAvatar;
   final Future<void> Function() onSignOut;
 
   @override
@@ -344,6 +434,7 @@ class _SignedInProfile extends StatelessWidget {
     final metadata = user.userMetadata ?? const <String, dynamic>{};
     final displayName = metadata['display_name'] as String?;
     final username = metadata['username'] as String?;
+    final avatarUrl = metadata['avatar_url'] as String?;
 
     return ListView(
       padding: ContentLayout.pagePadding,
@@ -357,9 +448,32 @@ class _SignedInProfile extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 42,
-                    child: Text(
-                      (displayName ?? user.email ?? '?')[0].toUpperCase(),
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    backgroundImage: avatarUrl == null
+                        ? null
+                        : NetworkImage(avatarUrl),
+                    child: avatarUrl == null
+                        ? Text(
+                            (displayName ?? user.email ?? '?')[0].toUpperCase(),
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    child: OutlinedButton.icon(
+                      onPressed: isUploadingAvatar ? null : onChangeAvatar,
+                      icon: Icon(
+                        isUploadingAvatar
+                            ? Icons.hourglass_top_rounded
+                            : Remix.camera_line,
+                      ),
+                      label: Text(
+                        isUploadingAvatar
+                            ? 'Uploading...'
+                            : avatarUrl == null
+                            ? 'Add profile image'
+                            : 'Change profile image',
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -390,6 +504,24 @@ class _SignedInProfile extends StatelessWidget {
       ],
     );
   }
+}
+
+String _imageExtension(String fileName) {
+  final extension = fileName.split('.').last.toLowerCase();
+  return switch (extension) {
+    'jpg' || 'jpeg' => 'jpg',
+    'png' => 'png',
+    'webp' => 'webp',
+    _ => throw const FormatException('Choose a JPG, PNG or WebP image.'),
+  };
+}
+
+String _imageContentType(String extension) {
+  return switch (extension) {
+    'png' => 'image/png',
+    'webp' => 'image/webp',
+    _ => 'image/jpeg',
+  };
 }
 
 class _AuthHeader extends StatelessWidget {
