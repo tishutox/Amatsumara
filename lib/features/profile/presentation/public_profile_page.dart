@@ -166,9 +166,8 @@ class _ProfileContent extends StatelessWidget {
                                 label: Text(
                                   '${mention.tag} · @${mention.username}',
                                 ),
-                                onPressed: () => context.push(
-                                  '/u/${mention.username}',
-                                ),
+                                onPressed: () =>
+                                    context.push('/u/${mention.username}'),
                               ),
                           ],
                         ),

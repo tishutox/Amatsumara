@@ -71,9 +71,7 @@ class ProfileRepository {
       username: row['username'] as String,
       displayName: row['display_name'] as String,
       bio: row['bio'] as String? ?? '',
-      bioAlignment: BioAlignment.fromDatabase(
-        row['bio_alignment'] as String?,
-      ),
+      bioAlignment: BioAlignment.fromDatabase(row['bio_alignment'] as String?),
       avatarUrl: row['avatar_url'] as String?,
       bannerUrl: row['banner_url'] as String?,
       links: links,
@@ -128,10 +126,7 @@ class ProfileRepository {
       });
     }
 
-    await _client
-        .from('profile_mentions')
-        .delete()
-        .eq('profile_id', profileId);
+    await _client.from('profile_mentions').delete().eq('profile_id', profileId);
     if (mentionRows.isNotEmpty) {
       await _client.from('profile_mentions').insert(mentionRows);
     }

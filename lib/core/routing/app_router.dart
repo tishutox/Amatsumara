@@ -9,18 +9,13 @@ final appRouter = GoRouter(
     GoRoute(path: '/', builder: (_, _) => const AppShell()),
     GoRoute(
       path: '/u/:username',
-      builder: (_, state) => PublicProfilePage(
-        username: state.pathParameters['username'] ?? '',
-      ),
+      builder: (_, state) =>
+          PublicProfilePage(username: state.pathParameters['username'] ?? ''),
     ),
-    GoRoute(
-      path: '/edit-profile',
-      builder: (_, _) => const EditProfilePage(),
-    ),
+    GoRoute(path: '/edit-profile', builder: (_, _) => const EditProfilePage()),
   ],
-  errorBuilder: (_, state) => Scaffold(
-    body: Center(child: Text('Page not found: ${state.uri.path}')),
-  ),
+  errorBuilder: (_, state) =>
+      Scaffold(body: Center(child: Text('Page not found: ${state.uri.path}'))),
 );
 
 String? profileLocationFromUri(Uri uri) {

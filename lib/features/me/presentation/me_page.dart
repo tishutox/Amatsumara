@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -177,64 +178,6 @@ class _MePageState extends State<MePage> {
     await Supabase.instance.client.auth.signOut();
   }
 
-  Future<void> _pickAndUploadAvatar() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null || _isUploadingAvatar) {
-      return;
-    }
-
-    final image = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      maxHeight: 1024,
-      imageQuality: 85,
-    );
-    if (image == null || !mounted) {
-      return;
-    }
-
-    setState(() => _isUploadingAvatar = true);
-    try {
-      final avatar = await _readAvatar(image);
-      await _uploadAvatar(
-        user: user,
-        bytes: avatar.bytes,
-        extension: avatar.extension,
-      );
-
-      if (mounted) {
-        setState(() {});
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profile image saved.')));
-      }
-    } on FormatException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    } on StorageException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('The profile image could not be saved.'),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isUploadingAvatar = false);
-      }
-    }
-  }
-
   Future<void> _pickRegistrationAvatar() async {
     final image = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -311,8 +254,11 @@ class _MePageState extends State<MePage> {
     if (user != null) {
       return _SignedInProfile(
         user: user,
-        isUploadingAvatar: _isUploadingAvatar,
-        onChangeAvatar: _pickAndUploadAvatar,
+        onEdit: () async {
+          await context.push<bool>('/edit-profile');
+          if (mounted) setState(() {});
+        },
+        onView: (username) => context.push('/u/$username'),
         onSignOut: _signOut,
       );
     }
@@ -484,14 +430,14 @@ class _MePageState extends State<MePage> {
 class _SignedInProfile extends StatelessWidget {
   const _SignedInProfile({
     required this.user,
-    required this.isUploadingAvatar,
-    required this.onChangeAvatar,
+    required this.onEdit,
+    required this.onView,
     required this.onSignOut,
   });
 
   final User user;
-  final bool isUploadingAvatar;
-  final Future<void> Function() onChangeAvatar;
+  final VoidCallback onEdit;
+  final ValueChanged<String> onView;
   final Future<void> Function() onSignOut;
 
   @override
@@ -521,24 +467,6 @@ class _SignedInProfile extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Align(
-                    child: OutlinedButton.icon(
-                      onPressed: isUploadingAvatar ? null : onChangeAvatar,
-                      icon: Icon(
-                        isUploadingAvatar
-                            ? Icons.hourglass_top_rounded
-                            : Remix.camera_line,
-                      ),
-                      label: Text(
-                        isUploadingAvatar
-                            ? 'Uploading...'
-                            : avatarUrl == null
-                            ? 'Add profile image'
-                            : 'Change profile image',
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   Text(
                     displayName ?? 'Lumii Quest member',
@@ -549,11 +477,18 @@ class _SignedInProfile extends StatelessWidget {
                   ),
                   if (username != null) ...[
                     const SizedBox(height: 4),
-                    Text('@$username', textAlign: TextAlign.center),
+                    TextButton(
+                      onPressed: () => onView(username),
+                      child: Text('@$username'),
+                    ),
                   ],
-                  const SizedBox(height: 4),
-                  Text(user.email ?? '', textAlign: TextAlign.center),
                   const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: onEdit,
+                    icon: const Icon(Remix.edit_line),
+                    label: const Text('Edit Profile'),
+                  ),
+                  const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: onSignOut,
                     icon: const Icon(Icons.logout_outlined),
@@ -599,6 +534,10 @@ Future<void> _uploadAvatar({
   await Supabase.instance.client.auth.updateUser(
     UserAttributes(data: {'avatar_url': avatarUrl}),
   );
+  await Supabase.instance.client
+      .from('profiles')
+      .update({'avatar_url': avatarUrl})
+      .eq('id', user.id);
 }
 
 String _imageExtension(String fileName) {
