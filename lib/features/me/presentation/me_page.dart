@@ -511,17 +511,15 @@ class _SignedInProfile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CircleAvatar(
-                    radius: 42,
-                    backgroundImage: avatarUrl == null
+                  _ContainedProfileImage(
+                    size: 84,
+                    imageProvider: avatarUrl == null
                         ? null
                         : NetworkImage(avatarUrl),
-                    child: avatarUrl == null
-                        ? Text(
-                            (displayName ?? user.email ?? '?')[0].toUpperCase(),
-                            style: Theme.of(context).textTheme.headlineMedium,
-                          )
-                        : null,
+                    fallback: Text(
+                      (displayName ?? user.email ?? '?')[0].toUpperCase(),
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Align(
@@ -702,13 +700,10 @@ class _ProfileImagePicker extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
-        CircleAvatar(
-          radius: 40,
-          backgroundColor: primary.withValues(alpha: 0.14),
-          backgroundImage: imageBytes == null ? null : MemoryImage(imageBytes!),
-          child: imageBytes == null
-              ? Icon(Remix.camera_line, color: primary, size: 30)
-              : null,
+        _ContainedProfileImage(
+          size: 80,
+          imageProvider: imageBytes == null ? null : MemoryImage(imageBytes!),
+          fallback: Icon(Remix.camera_line, color: primary, size: 30),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
@@ -721,6 +716,41 @@ class _ProfileImagePicker extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ContainedProfileImage extends StatelessWidget {
+  const _ContainedProfileImage({
+    required this.size,
+    required this.imageProvider,
+    required this.fallback,
+  });
+
+  final double size;
+  final ImageProvider? imageProvider;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final image = imageProvider;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: primary.withValues(alpha: 0.14),
+      ),
+      padding: EdgeInsets.all(size * 0.12),
+      child: image == null
+          ? Center(child: fallback)
+          : Image(
+              image: image,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Center(child: fallback),
+            ),
     );
   }
 }

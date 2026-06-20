@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
@@ -10,6 +11,7 @@ import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:flutter/material.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum SystemColorMode { light, dark, hellaverse, glitch }
 
@@ -40,6 +42,7 @@ class _AppShellState extends State<AppShell> {
   int? _hoveredCompactIndex;
   bool _hasShownUpdateHint = false;
   SystemColorMode _colorMode = SystemColorMode.light;
+  late final StreamSubscription<AuthState> _authSubscription;
 
   static const _titles = ['Discover', 'Communities', 'Chats', 'Me'];
   static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
@@ -104,7 +107,50 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      _,
+    ) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
     _loadSavedColorMode();
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
+
+  String? get _avatarUrl {
+    final value =
+        Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  Widget _navigationIcon({
+    required int index,
+    required bool selected,
+    required Color navColor,
+  }) {
+    final fallback = Icon(
+      selected ? _fillIcons[index] : _lineIcons[index],
+      color: selected ? navColor : navColor.withValues(alpha: 0.72),
+    );
+    final avatarUrl = _avatarUrl;
+    if (index != 3 || avatarUrl == null) {
+      return fallback;
+    }
+
+    return SizedBox.square(
+      dimension: 24,
+      child: Image.network(
+        avatarUrl,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => fallback,
+      ),
+    );
   }
 
   Future<void> _loadSavedColorMode() async {
@@ -267,11 +313,16 @@ class _AppShellState extends State<AppShell> {
                   destinations: List<NavigationRailDestination>.generate(
                     _labels.length,
                     (index) => NavigationRailDestination(
-                      icon: Icon(
-                        _lineIcons[index],
-                        color: navColor.withValues(alpha: 0.72),
+                      icon: _navigationIcon(
+                        index: index,
+                        selected: false,
+                        navColor: navColor,
                       ),
-                      selectedIcon: Icon(_fillIcons[index], color: navColor),
+                      selectedIcon: _navigationIcon(
+                        index: index,
+                        selected: true,
+                        navColor: navColor,
+                      ),
                       label: Text(
                         _labels[index],
                         style: TextStyle(color: navColor),
@@ -361,13 +412,10 @@ class _AppShellState extends State<AppShell> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    isSelected
-                                        ? _fillIcons[index]
-                                        : _lineIcons[index],
-                                    color: isSelected
-                                        ? navColor
-                                        : navColor.withValues(alpha: 0.72),
+                                  _navigationIcon(
+                                    index: index,
+                                    selected: isSelected,
+                                    navColor: navColor,
                                   ),
                                 ],
                               ),
