@@ -54,7 +54,7 @@ class _MePageState extends State<MePage> {
     );
   }
 
-  Future<void> _handleAuthState(AuthState state) async {
+  void _handleAuthState(AuthState state) {
     if (!mounted) {
       return;
     }
@@ -65,7 +65,7 @@ class _MePageState extends State<MePage> {
         session != null &&
         _registrationAvatarBytes != null &&
         !_isUploadingAvatar) {
-      await _uploadPendingRegistrationAvatar(session.user);
+      unawaited(_uploadPendingRegistrationAvatar(session.user));
     }
   }
 
@@ -131,6 +131,14 @@ class _MePageState extends State<MePage> {
           return;
         }
         final needsConfirmation = response.session == null;
+        if (response.session != null &&
+            _registrationAvatarBytes != null &&
+            !_isUploadingAvatar) {
+          await _uploadPendingRegistrationAvatar(response.session!.user);
+        }
+        if (!mounted) {
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
