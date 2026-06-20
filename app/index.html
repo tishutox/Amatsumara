@@ -33,6 +33,13 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+    const restoredPath = sessionStorage.getItem('lumii-restore-path');
+    if (restoredPath) {
+      sessionStorage.removeItem('lumii-restore-path');
+      history.replaceState(null, '', restoredPath);
+    }
+  </script>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
