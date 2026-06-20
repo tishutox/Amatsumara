@@ -32,6 +32,8 @@ class _MePageState extends State<MePage> {
   String? _country;
   bool _isSubmitting = false;
   bool _isUploadingAvatar = false;
+  Uint8List? _registrationAvatarBytes;
+  String? _registrationAvatarExtension;
   late final StreamSubscription<AuthState> _authSubscription;
 
   static const _countries = <String>[
@@ -47,13 +49,24 @@ class _MePageState extends State<MePage> {
   @override
   void initState() {
     super.initState();
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
-      _,
-    ) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      _handleAuthState,
+    );
+  }
+
+  Future<void> _handleAuthState(AuthState state) async {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+
+    final session = state.session;
+    if (state.event == AuthChangeEvent.signedIn &&
+        session != null &&
+        _registrationAvatarBytes != null &&
+        !_isUploadingAvatar) {
+      await _uploadPendingRegistrationAvatar(session.user);
+    }
   }
 
   @override
@@ -139,11 +152,11 @@ class _MePageState extends State<MePage> {
           context,
         ).showSnackBar(SnackBar(content: Text(error.message)));
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Something went wrong. Try again.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_friendlyAuthError(error))));
       }
     } finally {
       if (mounted) {
@@ -174,28 +187,11 @@ class _MePageState extends State<MePage> {
 
     setState(() => _isUploadingAvatar = true);
     try {
-      final bytes = await image.readAsBytes();
-      if (bytes.lengthInBytes > 5 * 1024 * 1024) {
-        throw const FormatException('The image must be smaller than 5 MB.');
-      }
-
-      final extension = _imageExtension(image.name);
-      final path = '${user.id}/avatar.$extension';
-      final storage = Supabase.instance.client.storage.from('avatars');
-      await storage.uploadBinary(
-        path,
-        bytes,
-        fileOptions: FileOptions(
-          upsert: true,
-          contentType: _imageContentType(extension),
-          cacheControl: '3600',
-        ),
-      );
-
-      final publicUrl = storage.getPublicUrl(path);
-      final avatarUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(data: {'avatar_url': avatarUrl}),
+      final avatar = await _readAvatar(image);
+      await _uploadAvatar(
+        user: user,
+        bytes: avatar.bytes,
+        extension: avatar.extension,
       );
 
       if (mounted) {
@@ -231,14 +227,74 @@ class _MePageState extends State<MePage> {
     }
   }
 
-  void _showProfileImageHint() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'You can add a profile image after creating the account.',
-        ),
-      ),
+  Future<void> _pickRegistrationAvatar() async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
     );
+    if (image == null || !mounted) {
+      return;
+    }
+
+    try {
+      final avatar = await _readAvatar(image);
+      setState(() {
+        _registrationAvatarBytes = avatar.bytes;
+        _registrationAvatarExtension = avatar.extension;
+      });
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  Future<void> _uploadPendingRegistrationAvatar(User user) async {
+    final bytes = _registrationAvatarBytes;
+    final extension = _registrationAvatarExtension;
+    if (bytes == null || extension == null || _isUploadingAvatar) {
+      return;
+    }
+
+    setState(() => _isUploadingAvatar = true);
+    try {
+      await _uploadAvatar(user: user, bytes: bytes, extension: extension);
+      if (mounted) {
+        setState(() {
+          _registrationAvatarBytes = null;
+          _registrationAvatarExtension = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account and profile image saved.')),
+        );
+      }
+    } on StorageException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Account created, but image failed: ${error.message}',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created, but the image could not be saved.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+      }
+    }
   }
 
   @override
@@ -278,7 +334,8 @@ class _MePageState extends State<MePage> {
                     if (isSignUp) ...[
                       Center(
                         child: _ProfileImagePicker(
-                          onPressed: _showProfileImageHint,
+                          imageBytes: _registrationAvatarBytes,
+                          onPressed: _pickRegistrationAvatar,
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -506,6 +563,38 @@ class _SignedInProfile extends StatelessWidget {
   }
 }
 
+Future<({Uint8List bytes, String extension})> _readAvatar(XFile image) async {
+  final bytes = await image.readAsBytes();
+  if (bytes.lengthInBytes > 5 * 1024 * 1024) {
+    throw const FormatException('The image must be smaller than 5 MB.');
+  }
+  return (bytes: bytes, extension: _imageExtension(image.name));
+}
+
+Future<void> _uploadAvatar({
+  required User user,
+  required Uint8List bytes,
+  required String extension,
+}) async {
+  final path = '${user.id}/avatar.$extension';
+  final storage = Supabase.instance.client.storage.from('avatars');
+  await storage.uploadBinary(
+    path,
+    bytes,
+    fileOptions: FileOptions(
+      upsert: true,
+      contentType: _imageContentType(extension),
+      cacheControl: '3600',
+    ),
+  );
+
+  final publicUrl = storage.getPublicUrl(path);
+  final avatarUrl = '$publicUrl?v=${DateTime.now().millisecondsSinceEpoch}';
+  await Supabase.instance.client.auth.updateUser(
+    UserAttributes(data: {'avatar_url': avatarUrl}),
+  );
+}
+
 String _imageExtension(String fileName) {
   final extension = fileName.split('.').last.toLowerCase();
   return switch (extension) {
@@ -522,6 +611,16 @@ String _imageContentType(String extension) {
     'webp' => 'image/webp',
     _ => 'image/jpeg',
   };
+}
+
+String _friendlyAuthError(Object error) {
+  final message = error.toString();
+  final normalized = message.toLowerCase();
+  if (normalized.contains('failed host lookup') ||
+      normalized.contains('socketexception')) {
+    return 'Supabase could not be reached. Check your internet or DNS connection.';
+  }
+  return 'Account request failed. Please try again.';
 }
 
 class _AuthHeader extends StatelessWidget {
@@ -582,8 +681,12 @@ class _AuthHeader extends StatelessWidget {
 }
 
 class _ProfileImagePicker extends StatelessWidget {
-  const _ProfileImagePicker({required this.onPressed});
+  const _ProfileImagePicker({
+    required this.imageBytes,
+    required this.onPressed,
+  });
 
+  final Uint8List? imageBytes;
   final VoidCallback onPressed;
 
   @override
@@ -594,13 +697,20 @@ class _ProfileImagePicker extends StatelessWidget {
         CircleAvatar(
           radius: 40,
           backgroundColor: primary.withValues(alpha: 0.14),
-          child: Icon(Remix.camera_line, color: primary, size: 30),
+          backgroundImage: imageBytes == null ? null : MemoryImage(imageBytes!),
+          child: imageBytes == null
+              ? Icon(Remix.camera_line, color: primary, size: 30)
+              : null,
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: onPressed,
           icon: const Icon(Remix.camera_line),
-          label: const Text('Profile image'),
+          label: Text(
+            imageBytes == null
+                ? 'Select profile image'
+                : 'Change profile image',
+          ),
         ),
       ],
     );
