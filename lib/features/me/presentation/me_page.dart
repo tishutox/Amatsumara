@@ -511,7 +511,7 @@ class _SignedInProfile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _ContainedProfileImage(
+                  _CircularProfileImage(
                     size: 84,
                     imageProvider: avatarUrl == null
                         ? null
@@ -700,7 +700,7 @@ class _ProfileImagePicker extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
-        _ContainedProfileImage(
+        _CircularProfileImage(
           size: 80,
           imageProvider: imageBytes == null ? null : MemoryImage(imageBytes!),
           fallback: Icon(Remix.camera_line, color: primary, size: 30),
@@ -720,8 +720,8 @@ class _ProfileImagePicker extends StatelessWidget {
   }
 }
 
-class _ContainedProfileImage extends StatelessWidget {
-  const _ContainedProfileImage({
+class _CircularProfileImage extends StatelessWidget {
+  const _CircularProfileImage({
     required this.size,
     required this.imageProvider,
     required this.fallback,
@@ -736,21 +736,22 @@ class _ContainedProfileImage extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final image = imageProvider;
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
+    return ClipOval(
+      child: ColoredBox(
         color: primary.withValues(alpha: 0.14),
+        child: SizedBox.square(
+          dimension: size,
+          child: image == null
+              ? Center(child: fallback)
+              : Image(
+                  image: image,
+                  width: size,
+                  height: size,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Center(child: fallback),
+                ),
+        ),
       ),
-      padding: EdgeInsets.all(size * 0.12),
-      child: image == null
-          ? Center(child: fallback)
-          : Image(
-              image: image,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) => Center(child: fallback),
-            ),
     );
   }
 }
