@@ -11,9 +11,7 @@ void main() {
   });
 
   test('maps the custom app scheme to an app route', () {
-    final location = profileLocationFromUri(
-      Uri.parse('lumiiquest://u/Alice'),
-    );
+    final location = profileLocationFromUri(Uri.parse('lumiiquest://u/Alice'));
 
     expect(location, '/u/Alice');
   });

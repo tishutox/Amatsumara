@@ -47,6 +47,11 @@ flutter run -d windows `
 Before profile image uploads can be used, run
 `supabase/avatar_storage.sql` once in the Supabase SQL Editor.
 
+For public profiles, banners, bios, links and people tags, run
+`supabase/profiles.sql` once in the Supabase SQL Editor. Public profile URLs use
+`https://tishutox.github.io/Lumii/app/u/username` and the app scheme
+`lumiiquest://u/username`.
+
 ## Run By Platform
 
 ```bash
