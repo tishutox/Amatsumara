@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opening Lumii Quest…</title>
+</head>
+<body>
+  <p>Opening Lumii Quest…</p>
+  <script>
+    (() => {
+      const appPrefix = '/Lumii/app/';
+      const path = window.location.pathname;
+      if (!path.startsWith(appPrefix)) {
+        window.location.replace('/Lumii/');
+        return;
+      }
+
+      const relativePath = path.slice(appPrefix.length);
+      sessionStorage.setItem(
+        'lumii-restore-path',
+        `${path}${window.location.search}${window.location.hash}`,
+      );
+
+      if (relativePath.startsWith('u/')) {
+        window.location.href = `lumiiquest://${relativePath}`;
+      }
+
+      window.setTimeout(() => window.location.replace(appPrefix), 650);
+    })();
+  </script>
+</body>
+</html>
