@@ -736,20 +736,24 @@ class _CircularProfileImage extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final image = imageProvider;
 
-    return ClipOval(
-      child: ColoredBox(
-        color: primary.withValues(alpha: 0.14),
-        child: SizedBox.square(
-          dimension: size,
-          child: image == null
-              ? Center(child: fallback)
-              : Image(
-                  image: image,
-                  width: size,
-                  height: size,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Center(child: fallback),
-                ),
+    return Align(
+      alignment: Alignment.center,
+      child: SizedBox.square(
+        dimension: size,
+        child: ClipOval(
+          child: ColoredBox(
+            color: primary.withValues(alpha: 0.14),
+            child: image == null
+                ? Center(child: fallback)
+                : Image(
+                    image: image,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.medium,
+                    errorBuilder: (_, _, _) => Center(child: fallback),
+                  ),
+          ),
         ),
       ),
     );

@@ -143,15 +143,20 @@ class _AppShellState extends State<AppShell> {
       return fallback;
     }
 
-    return ClipOval(
+    return Center(
+      widthFactor: 1,
+      heightFactor: 1,
       child: SizedBox.square(
         dimension: 24,
-        child: Image.network(
-          avatarUrl,
-          width: 24,
-          height: 24,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => fallback,
+        child: ClipOval(
+          child: Image.network(
+            avatarUrl,
+            width: 24,
+            height: 24,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (_, _, _) => fallback,
+          ),
         ),
       ),
     );
