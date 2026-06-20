@@ -143,12 +143,16 @@ class _AppShellState extends State<AppShell> {
       return fallback;
     }
 
-    return SizedBox.square(
-      dimension: 24,
-      child: Image.network(
-        avatarUrl,
-        fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => fallback,
+    return ClipOval(
+      child: SizedBox.square(
+        dimension: 24,
+        child: Image.network(
+          avatarUrl,
+          width: 24,
+          height: 24,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => fallback,
+        ),
       ),
     );
   }
