@@ -45,6 +45,18 @@ class ProfileLink {
   String get label => legacyLabel ?? platform.label;
 }
 
+List<ProfileLink> sortedProfileLinks(Iterable<ProfileLink> links) {
+  final sorted = links.toList();
+  sorted.sort((a, b) {
+    final platformOrder = a.platform.label.toLowerCase().compareTo(
+      b.platform.label.toLowerCase(),
+    );
+    if (platformOrder != 0) return platformOrder;
+    return a.username.toLowerCase().compareTo(b.username.toLowerCase());
+  });
+  return sorted;
+}
+
 class ProfileMention {
   const ProfileMention({
     required this.username,

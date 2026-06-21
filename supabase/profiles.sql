@@ -96,6 +96,24 @@ create table if not exists public.profile_mentions (
   constraint profile_mentions_unique unique (profile_id, mentioned_profile_id)
 );
 
+delete from public.profile_mentions
+where id in (
+  select id
+  from (
+    select
+      id,
+      row_number() over (
+        partition by profile_id
+        order by position, id
+      ) as mention_rank
+    from public.profile_mentions
+  ) ranked_mentions
+  where mention_rank > 1
+);
+
+create unique index if not exists profile_mentions_one_per_profile
+on public.profile_mentions (profile_id);
+
 create or replace function public.set_profile_updated_at()
 returns trigger
 language plpgsql

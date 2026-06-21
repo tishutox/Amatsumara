@@ -77,8 +77,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() {
         _profile = profile;
         _alignment = profile.bioAlignment;
-        _links = [...profile.links];
-        _mentions = [...profile.mentions];
+        _links = sortedProfileLinks(profile.links);
+        _mentions = profile.mentions.take(1).toList();
         _backgroundColor = profile.backgroundColor;
         _accentColor = profile.accentColor;
         _loading = false;
@@ -133,7 +133,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       builder: (_) => const _SocialDialog(),
     );
     if (result != null && mounted) {
-      setState(() => _links = [..._links, result]);
+      setState(() => _links = sortedProfileLinks([..._links, result]));
     }
   }
 
@@ -143,14 +143,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       builder: (_) => const _MentionDialog(),
     );
     if (result != null && mounted) {
-      if (_mentions.any(
-        (mention) =>
-            mention.username.toLowerCase() == result.username.toLowerCase(),
-      )) {
-        _showMessage('This person is already added.');
-        return;
-      }
-      setState(() => _mentions = [..._mentions, result]);
+      setState(() => _mentions = [result]);
     }
   }
 
@@ -400,9 +393,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ),
                             const SizedBox(height: 20),
                             _EditorSection(
-                              title: 'People',
+                              title: 'Special person',
                               description:
-                                  'Reference another profile with your own tag (15 characters max).',
+                                  'Choose one profile and give the person a label (15 characters max).',
                               onAdd: _addMention,
                               children: [
                                 for (

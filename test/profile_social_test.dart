@@ -5,28 +5,47 @@ import 'package:lumii_quest/features/profile/domain/user_profile.dart';
 
 void main() {
   test('offers every requested social platform', () {
-    expect(
-      SocialPlatform.selectable.map((platform) => platform.label),
-      [
-        'Instagram',
-        'X',
-        'Twitch',
-        'YouTube',
-        'Discord',
-        'Behance',
-        'Dribbble',
-        'GitHub',
-        'Bluesky',
-        'Facebook',
-        'Reddit',
-        'Xbox',
-        'PlayStation',
-        'Nintendo',
-        'Steam',
-        'VKontakte',
-        'Pinterest',
-      ],
-    );
+    expect(SocialPlatform.selectable.map((platform) => platform.label), [
+      'Behance',
+      'Bluesky',
+      'Discord',
+      'Dribbble',
+      'Facebook',
+      'GitHub',
+      'Instagram',
+      'Nintendo',
+      'Pinterest',
+      'PlayStation',
+      'Reddit',
+      'Steam',
+      'Twitch',
+      'VKontakte',
+      'X',
+      'Xbox',
+      'YouTube',
+    ]);
+  });
+
+  test('sorts selected socials alphabetically', () {
+    final links = sortedProfileLinks([
+      ProfileLink(
+        platform: SocialPlatform.youtube,
+        username: 'lumii',
+        url: SocialPlatform.youtube.profileUrl('lumii'),
+      ),
+      ProfileLink(
+        platform: SocialPlatform.behance,
+        username: 'lumii',
+        url: SocialPlatform.behance.profileUrl('lumii'),
+      ),
+    ]);
+
+    expect(links.map((link) => link.platform.label), ['Behance', 'YouTube']);
+  });
+
+  test('Discord copies its username instead of opening a link', () {
+    expect(SocialPlatform.discord.copiesUsername, isTrue);
+    expect(SocialPlatform.instagram.copiesUsername, isFalse);
   });
 
   test('builds platform profile URLs from usernames', () {

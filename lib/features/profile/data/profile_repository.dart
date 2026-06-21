@@ -50,18 +50,23 @@ class ProfileRepository {
           .order('position'),
     ]);
 
-    final links = (results[0] as List)
-        .map(
-          (value) => ProfileLink(
-            platform: SocialPlatform.fromDatabase(value['platform'] as String?),
-            username: value['username'] as String? ?? value['label'] as String,
-            url: value['url'] as String,
-            legacyLabel: value['platform'] == 'legacy'
-                ? value['label'] as String
-                : null,
-          ),
-        )
-        .toList();
+    final links = sortedProfileLinks(
+      (results[0] as List)
+          .map(
+            (value) => ProfileLink(
+              platform: SocialPlatform.fromDatabase(
+                value['platform'] as String?,
+              ),
+              username:
+                  value['username'] as String? ?? value['label'] as String,
+              url: value['url'] as String,
+              legacyLabel: value['platform'] == 'legacy'
+                  ? value['label'] as String
+                  : null,
+            ),
+          )
+          .toList(),
+    );
     final mentions = (results[1] as List).map((value) {
       final mentioned = value['mentioned'] as Map<String, dynamic>;
       return ProfileMention(
@@ -123,8 +128,9 @@ class ProfileRepository {
     }
 
     final mentionRows = <Map<String, dynamic>>[];
-    for (var index = 0; index < draft.mentions.length; index++) {
-      final mention = draft.mentions[index];
+    final selectedMentions = draft.mentions.take(1).toList();
+    for (var index = 0; index < selectedMentions.length; index++) {
+      final mention = selectedMentions[index];
       final target = await _client
           .from('profiles')
           .select('id')

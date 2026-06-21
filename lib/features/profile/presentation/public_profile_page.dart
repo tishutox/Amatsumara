@@ -155,8 +155,12 @@ class _ProfileContent extends StatelessWidget {
                               style: profileTheme.textTheme.headlineSmall
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
-                            const SizedBox(height: 3),
-                            Text('@${profile.username}'),
+                            const SizedBox(height: 10),
+                            _ProfileConnections(
+                              links: profile.links,
+                              mention: profile.mentions.firstOrNull,
+                              accentColor: profile.accentColor,
+                            ),
                           ],
                         ),
                       ),
@@ -171,66 +175,6 @@ class _ProfileContent extends StatelessWidget {
                                 textAlign: profile.bioAlignment.textAlign,
                                 linkColor: profile.accentColor,
                               ),
-                            if (profile.links.isNotEmpty) ...[
-                              const SizedBox(height: 22),
-                              Text(
-                                'Socials',
-                                style: profileTheme.textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                alignment: WrapAlignment.start,
-                                children: [
-                                  for (final link in profile.links)
-                                    ActionChip(
-                                      avatar: Icon(
-                                        link.platform.icon,
-                                        size: 17,
-                                        color: profile.accentColor,
-                                      ),
-                                      label: Text(
-                                        link.platform == SocialPlatform.legacy
-                                            ? link.label
-                                            : link.username,
-                                      ),
-                                      onPressed: () =>
-                                          _openUrl(context, link.url),
-                                    ),
-                                ],
-                              ),
-                            ],
-                            if (profile.mentions.isNotEmpty) ...[
-                              const SizedBox(height: 26),
-                              Text(
-                                'People',
-                                style: profileTheme.textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(height: 10),
-                              Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
-                                children: [
-                                  for (final mention in profile.mentions)
-                                    ActionChip(
-                                      avatar: _Avatar(
-                                        url: mention.avatarUrl,
-                                        size: 24,
-                                        accentColor: profile.accentColor,
-                                      ),
-                                      label: Text(
-                                        '${mention.tag} · @${mention.username}',
-                                      ),
-                                      onPressed: () => context.push(
-                                        '/u/${mention.username}',
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
                           ],
                         ),
                       ),
@@ -241,6 +185,127 @@ class _ProfileContent extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileConnections extends StatelessWidget {
+  const _ProfileConnections({
+    required this.links,
+    required this.accentColor,
+    this.mention,
+  });
+
+  final List<ProfileLink> links;
+  final ProfileMention? mention;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final socials = sortedProfileLinks(links);
+    if (socials.isEmpty && mention == null) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PopupMenuButton<ProfileLink>(
+          enabled: socials.isNotEmpty,
+          tooltip: 'Socials',
+          onSelected: (link) => _activateSocial(context, link),
+          itemBuilder: (_) => [
+            for (final link in socials)
+              PopupMenuItem(
+                value: link,
+                child: Row(
+                  children: [
+                    Icon(link.platform.icon, size: 19, color: accentColor),
+                    const SizedBox(width: 10),
+                    Text(
+                      link.platform == SocialPlatform.legacy
+                          ? link.label
+                          : '${link.platform.label} · ${link.username}',
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          child: _ConnectionLabel(
+            icon: Remix.link,
+            label: 'Socials',
+            accentColor: accentColor,
+            showDropdown: true,
+          ),
+        ),
+        if (mention != null) ...[
+          Container(
+            width: 1,
+            height: 28,
+            margin: const EdgeInsets.symmetric(horizontal: 10),
+            color: accentColor.withValues(alpha: 0.42),
+          ),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => context.push('/u/${mention!.username}'),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _Avatar(
+                    url: mention!.avatarUrl,
+                    size: 24,
+                    accentColor: accentColor,
+                  ),
+                  const SizedBox(width: 7),
+                  Text(
+                    mention!.tag,
+                    style: TextStyle(
+                      color: accentColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ConnectionLabel extends StatelessWidget {
+  const _ConnectionLabel({
+    required this.icon,
+    required this.label,
+    required this.accentColor,
+    this.showDropdown = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color accentColor;
+  final bool showDropdown;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: accentColor),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: TextStyle(color: accentColor, fontWeight: FontWeight.w700),
+          ),
+          if (showDropdown) ...[
+            const SizedBox(width: 3),
+            Icon(Remix.arrow_up_down_line, size: 18, color: accentColor),
+          ],
+        ],
       ),
     );
   }
@@ -448,4 +513,17 @@ Future<void> _openUrl(BuildContext context, String value) async {
     return;
   }
   await launchUrl(uri, mode: LaunchMode.externalApplication);
+}
+
+Future<void> _activateSocial(BuildContext context, ProfileLink link) async {
+  if (link.platform.copiesUsername) {
+    await Clipboard.setData(ClipboardData(text: link.username));
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Discord username copied.')));
+    }
+    return;
+  }
+  await _openUrl(context, link.url);
 }

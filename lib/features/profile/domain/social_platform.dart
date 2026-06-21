@@ -26,9 +26,17 @@ enum SocialPlatform {
   final String label;
   final IconData icon;
 
-  static List<SocialPlatform> get selectable => values
-      .where((platform) => platform != SocialPlatform.legacy)
-      .toList(growable: false);
+  bool get copiesUsername => this == SocialPlatform.discord;
+
+  static List<SocialPlatform> get selectable {
+    final platforms = values
+        .where((platform) => platform != SocialPlatform.legacy)
+        .toList();
+    platforms.sort(
+      (a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()),
+    );
+    return List.unmodifiable(platforms);
+  }
 
   static SocialPlatform fromDatabase(String? value) {
     return values.firstWhere(
