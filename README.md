@@ -55,6 +55,9 @@ For public profiles, banners, bios, links and people tags, run
 If `supabase/profiles.sql` changes after the initial setup, run the complete
 file again. The migration is idempotent and adds new profile fields safely.
 
+For the private notifications inbox, run `supabase/notifications.sql` once in
+the Supabase SQL Editor.
+
 ## Run By Platform
 
 ```bash
