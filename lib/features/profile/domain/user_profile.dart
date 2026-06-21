@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lumii_quest/features/profile/domain/social_platform.dart';
 
 enum BioAlignment {
   left,
@@ -29,10 +30,19 @@ enum BioAlignment {
 }
 
 class ProfileLink {
-  const ProfileLink({required this.label, required this.url});
+  const ProfileLink({
+    required this.platform,
+    required this.username,
+    required this.url,
+    this.legacyLabel,
+  });
 
-  final String label;
+  final SocialPlatform platform;
+  final String username;
   final String url;
+  final String? legacyLabel;
+
+  String get label => legacyLabel ?? platform.label;
 }
 
 class ProfileMention {
@@ -58,6 +68,8 @@ class UserProfile {
     required this.bioAlignment,
     required this.links,
     required this.mentions,
+    required this.backgroundColor,
+    required this.accentColor,
     this.avatarUrl,
     this.bannerUrl,
   });
@@ -71,6 +83,8 @@ class UserProfile {
   final String? bannerUrl;
   final List<ProfileLink> links;
   final List<ProfileMention> mentions;
+  final Color backgroundColor;
+  final Color accentColor;
 }
 
 class ProfileDraft {
@@ -82,6 +96,8 @@ class ProfileDraft {
     required this.bannerUrl,
     required this.links,
     required this.mentions,
+    required this.backgroundColor,
+    required this.accentColor,
   });
 
   final String displayName;
@@ -91,4 +107,19 @@ class ProfileDraft {
   final String? bannerUrl;
   final List<ProfileLink> links;
   final List<ProfileMention> mentions;
+  final Color backgroundColor;
+  final Color accentColor;
+}
+
+Color profileColorFromHex(String? value, Color fallback) {
+  final normalized = value?.trim().replaceFirst('#', '');
+  if (normalized == null || !RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(normalized)) {
+    return fallback;
+  }
+  return Color(int.parse('FF$normalized', radix: 16));
+}
+
+String profileColorToHex(Color color) {
+  final rgb = color.toARGB32() & 0x00FFFFFF;
+  return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }

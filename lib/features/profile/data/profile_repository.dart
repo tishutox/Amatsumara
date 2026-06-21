@@ -1,4 +1,6 @@
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
+import 'package:lumii_quest/features/profile/domain/social_platform.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileRepository {
@@ -36,7 +38,7 @@ class ProfileRepository {
     final results = await Future.wait([
       _client
           .from('profile_links')
-          .select('label,url')
+          .select()
           .eq('profile_id', id)
           .order('position'),
       _client
@@ -51,8 +53,12 @@ class ProfileRepository {
     final links = (results[0] as List)
         .map(
           (value) => ProfileLink(
-            label: value['label'] as String,
+            platform: SocialPlatform.fromDatabase(value['platform'] as String?),
+            username: value['username'] as String? ?? value['label'] as String,
             url: value['url'] as String,
+            legacyLabel: value['platform'] == 'legacy'
+                ? value['label'] as String
+                : null,
           ),
         )
         .toList();
@@ -76,6 +82,14 @@ class ProfileRepository {
       bannerUrl: row['banner_url'] as String?,
       links: links,
       mentions: mentions,
+      backgroundColor: profileColorFromHex(
+        row['profile_background_color'] as String?,
+        Colors.white,
+      ),
+      accentColor: profileColorFromHex(
+        row['profile_accent_color'] as String?,
+        const Color(0xFF5860C3),
+      ),
     );
   }
 
@@ -88,6 +102,8 @@ class ProfileRepository {
           'bio_alignment': draft.bioAlignment.name,
           'avatar_url': draft.avatarUrl,
           'banner_url': draft.bannerUrl,
+          'profile_background_color': profileColorToHex(draft.backgroundColor),
+          'profile_accent_color': profileColorToHex(draft.accentColor),
         })
         .eq('id', profileId);
 
@@ -99,6 +115,8 @@ class ProfileRepository {
             'profile_id': profileId,
             'label': draft.links[index].label,
             'url': draft.links[index].url,
+            'platform': draft.links[index].platform.name,
+            'username': draft.links[index].username,
             'position': index,
           },
       ]);

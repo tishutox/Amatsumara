@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
+import 'package:lumii_quest/features/profile/domain/social_platform.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -25,6 +26,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   BioAlignment _alignment = BioAlignment.left;
   List<ProfileLink> _links = [];
   List<ProfileMention> _mentions = [];
+  Color _backgroundColor = Colors.white;
+  Color _accentColor = const Color(0xFF5860C3);
   Uint8List? _avatarBytes;
   String? _avatarExtension;
   Uint8List? _bannerBytes;
@@ -76,6 +79,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _alignment = profile.bioAlignment;
         _links = [...profile.links];
         _mentions = [...profile.mentions];
+        _backgroundColor = profile.backgroundColor;
+        _accentColor = profile.accentColor;
         _loading = false;
       });
     } catch (error) {
@@ -122,10 +127,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
-  Future<void> _addLink() async {
+  Future<void> _addSocial() async {
     final result = await showDialog<ProfileLink>(
       context: context,
-      builder: (_) => const _LinkDialog(),
+      builder: (_) => const _SocialDialog(),
     );
     if (result != null && mounted) {
       setState(() => _links = [..._links, result]);
@@ -194,6 +199,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         bannerUrl: bannerUrl,
         links: _links,
         mentions: _mentions,
+        backgroundColor: _backgroundColor,
+        accentColor: _accentColor,
       );
       await _repository.save(profile.id, draft);
       await Supabase.instance.client.auth.updateUser(
@@ -258,23 +265,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             _ImageEditor(
-                              title: 'Profile banner',
-                              height: 190,
-                              imageProvider: _bannerBytes != null
-                                  ? MemoryImage(_bannerBytes!)
-                                  : !_removeBanner &&
-                                        _profile!.bannerUrl != null
-                                  ? NetworkImage(_profile!.bannerUrl!)
-                                  : null,
-                              onChange: () => _pickImage(banner: true),
-                              onRemove: () => setState(() {
-                                _bannerBytes = null;
-                                _bannerExtension = null;
-                                _removeBanner = true;
-                              }),
-                            ),
-                            const SizedBox(height: 20),
-                            _ImageEditor(
                               title: 'Profile image',
                               height: 120,
                               circular: true,
@@ -289,6 +279,25 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 _avatarBytes = null;
                                 _avatarExtension = null;
                                 _removeAvatar = true;
+                              }),
+                            ),
+                            const SizedBox(height: 20),
+                            _ImageEditor(
+                              title: 'Profile banner',
+                              aspectRatio: 3,
+                              recommendation:
+                                  'Recommended size: 1500 × 500 px (3:1)',
+                              imageProvider: _bannerBytes != null
+                                  ? MemoryImage(_bannerBytes!)
+                                  : !_removeBanner &&
+                                        _profile!.bannerUrl != null
+                                  ? NetworkImage(_profile!.bannerUrl!)
+                                  : null,
+                              onChange: () => _pickImage(banner: true),
+                              onRemove: () => setState(() {
+                                _bannerBytes = null;
+                                _bannerExtension = null;
+                                _removeBanner = true;
                               }),
                             ),
                             const SizedBox(height: 24),
@@ -339,11 +348,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               },
                             ),
                             const SizedBox(height: 26),
+                            Text(
+                              'Profile colors',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: [
+                                _ColorPickerField(
+                                  label: 'Background',
+                                  color: _backgroundColor,
+                                  onChanged: (color) =>
+                                      setState(() => _backgroundColor = color),
+                                ),
+                                _ColorPickerField(
+                                  label: 'Links & icons',
+                                  color: _accentColor,
+                                  onChanged: (color) =>
+                                      setState(() => _accentColor = color),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 26),
                             _EditorSection(
-                              title: 'Links',
+                              title: 'Socials',
                               description:
-                                  'Add buttons or use (Text)[Link] directly in your bio.',
-                              onAdd: _addLink,
+                                  'Add your username and choose its platform.',
+                              onAdd: _addSocial,
                               children: [
                                 for (
                                   var index = 0;
@@ -352,9 +386,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 )
                                   ListTile(
                                     contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(Remix.link),
+                                    leading: Icon(_links[index].platform.icon),
                                     title: Text(_links[index].label),
-                                    subtitle: Text(_links[index].url),
+                                    subtitle: Text(_links[index].username),
                                     trailing: IconButton(
                                       onPressed: () => setState(
                                         () => _links.removeAt(index),
@@ -413,15 +447,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
 class _ImageEditor extends StatelessWidget {
   const _ImageEditor({
     required this.title,
-    required this.height,
     required this.imageProvider,
     required this.onChange,
     required this.onRemove,
+    this.height,
+    this.aspectRatio,
+    this.recommendation,
     this.circular = false,
   });
 
   final String title;
-  final double height;
+  final double? height;
+  final double? aspectRatio;
+  final String? recommendation;
   final ImageProvider? imageProvider;
   final VoidCallback onChange;
   final VoidCallback onRemove;
@@ -429,7 +467,7 @@ class _ImageEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preview = SizedBox(
+    final image = SizedBox(
       width: circular ? height : double.infinity,
       height: height,
       child: imageProvider == null
@@ -441,11 +479,18 @@ class _ImageEditor extends StatelessWidget {
             )
           : Image(image: imageProvider!, fit: BoxFit.cover),
     );
+    final preview = aspectRatio == null
+        ? image
+        : AspectRatio(aspectRatio: aspectRatio!, child: image);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: Theme.of(context).textTheme.titleMedium),
+        if (recommendation != null) ...[
+          const SizedBox(height: 3),
+          Text(recommendation!, style: Theme.of(context).textTheme.bodySmall),
+        ],
         const SizedBox(height: 9),
         Align(
           alignment: Alignment.center,
@@ -519,40 +564,56 @@ class _EditorSection extends StatelessWidget {
   }
 }
 
-class _LinkDialog extends StatefulWidget {
-  const _LinkDialog();
+class _SocialDialog extends StatefulWidget {
+  const _SocialDialog();
 
   @override
-  State<_LinkDialog> createState() => _LinkDialogState();
+  State<_SocialDialog> createState() => _SocialDialogState();
 }
 
-class _LinkDialogState extends State<_LinkDialog> {
-  final _label = TextEditingController();
-  final _url = TextEditingController(text: 'https://');
+class _SocialDialogState extends State<_SocialDialog> {
+  final _username = TextEditingController();
+  SocialPlatform _platform = SocialPlatform.instagram;
 
   @override
   void dispose() {
-    _label.dispose();
-    _url.dispose();
+    _username.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add link'),
+      title: const Text('Add social'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
-            controller: _label,
-            maxLength: 50,
-            decoration: const InputDecoration(labelText: 'Text'),
+            controller: _username,
+            maxLength: 100,
+            decoration: const InputDecoration(labelText: 'Username'),
           ),
-          TextField(
-            controller: _url,
-            keyboardType: TextInputType.url,
-            decoration: const InputDecoration(labelText: 'Link'),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<SocialPlatform>(
+            initialValue: _platform,
+            decoration: const InputDecoration(labelText: 'Platform'),
+            items: [
+              for (final platform in SocialPlatform.selectable)
+                DropdownMenuItem(
+                  value: platform,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(platform.icon, size: 19),
+                      const SizedBox(width: 10),
+                      Text(platform.label),
+                    ],
+                  ),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _platform = value);
+            },
           ),
         ],
       ),
@@ -560,17 +621,159 @@ class _LinkDialogState extends State<_LinkDialog> {
         TextButton(onPressed: context.pop, child: const Text('Cancel')),
         FilledButton(
           onPressed: () {
-            final uri = Uri.tryParse(_url.text.trim());
-            if (_label.text.trim().isEmpty ||
-                uri == null ||
-                !{'http', 'https'}.contains(uri.scheme)) {
-              return;
-            }
+            final username = _username.text.trim();
+            if (username.isEmpty) return;
             context.pop(
-              ProfileLink(label: _label.text.trim(), url: uri.toString()),
+              ProfileLink(
+                platform: _platform,
+                username: username,
+                url: _platform.profileUrl(username),
+              ),
             );
           },
           child: const Text('Add'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ColorPickerField extends StatelessWidget {
+  const _ColorPickerField({
+    required this.label,
+    required this.color,
+    required this.onChanged,
+  });
+
+  final String label;
+  final Color color;
+  final ValueChanged<Color> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () async {
+        final result = await showDialog<Color>(
+          context: context,
+          builder: (_) => _ColorDialog(initialColor: color),
+        );
+        if (result != null) onChanged(result);
+      },
+      icon: Container(
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
+      ),
+      label: Text('$label  ${profileColorToHex(color)}'),
+    );
+  }
+}
+
+class _ColorDialog extends StatefulWidget {
+  const _ColorDialog({required this.initialColor});
+
+  final Color initialColor;
+
+  @override
+  State<_ColorDialog> createState() => _ColorDialogState();
+}
+
+class _ColorDialogState extends State<_ColorDialog> {
+  static const _presets = [
+    Color(0xFFFFFFFF),
+    Color(0xFFF4F2FF),
+    Color(0xFFFFF1F5),
+    Color(0xFFFFF5E6),
+    Color(0xFFEAF8F1),
+    Color(0xFFEAF4FF),
+    Color(0xFF121212),
+    Color(0xFF1E2340),
+    Color(0xFF5860C3),
+    Color(0xFFDB5DC9),
+    Color(0xFFF90142),
+    Color(0xFF00A884),
+  ];
+
+  late Color _selected = widget.initialColor;
+  late final TextEditingController _hex = TextEditingController(
+    text: profileColorToHex(widget.initialColor),
+  );
+
+  @override
+  void dispose() {
+    _hex.dispose();
+    super.dispose();
+  }
+
+  void _setColor(Color color) {
+    setState(() {
+      _selected = color;
+      _hex.text = profileColorToHex(color);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Choose color'),
+      content: SizedBox(
+        width: 340,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final color in _presets)
+                  InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => _setColor(color),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: color == _selected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outline,
+                          width: color == _selected ? 3 : 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _hex,
+              maxLength: 7,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Hex color',
+                hintText: '#5860C3',
+              ),
+              onChanged: (value) {
+                final parsed = profileColorFromHex(value, _selected);
+                if (value.replaceFirst('#', '').length == 6) {
+                  setState(() => _selected = parsed);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: context.pop, child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () => context.pop(_selected),
+          child: const Text('Use color'),
         ),
       ],
     );

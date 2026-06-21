@@ -6,6 +6,7 @@ import 'package:lumii_quest/core/routing/profile_links.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
+import 'package:lumii_quest/features/profile/domain/social_platform.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -97,154 +98,236 @@ class _ProfileContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Banner(url: profile.bannerUrl),
-                Transform.translate(
-                  offset: const Offset(0, -48),
-                  child: Column(
-                    children: [
-                      _Avatar(url: profile.avatarUrl, size: 96),
-                      const SizedBox(height: 12),
-                      Text(
-                        profile.displayName,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 3),
-                      Text('@${profile.username}'),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+    final foreground = profile.backgroundColor.computeLuminance() > 0.48
+        ? const Color(0xFF17171B)
+        : const Color(0xFFF7F5FA);
+    final baseTheme = Theme.of(context);
+    final profileTheme = baseTheme.copyWith(
+      textTheme: baseTheme.textTheme.apply(
+        bodyColor: foreground,
+        displayColor: foreground,
+      ),
+      iconTheme: IconThemeData(color: profile.accentColor),
+      chipTheme: baseTheme.chipTheme.copyWith(
+        backgroundColor: profile.accentColor.withValues(alpha: 0.12),
+        selectedColor: profile.accentColor.withValues(alpha: 0.18),
+        labelStyle: TextStyle(color: foreground),
+        side: BorderSide(color: profile.accentColor.withValues(alpha: 0.45)),
+      ),
+    );
+
+    return ColoredBox(
+      color: profile.backgroundColor,
+      child: Theme(
+        data: profileTheme,
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: foreground),
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 32),
+            children: [
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (profile.bio.isNotEmpty)
-                        _BioText(
-                          text: profile.bio,
-                          textAlign: profile.bioAlignment.textAlign,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                        child: _Banner(
+                          url: profile.bannerUrl,
+                          accentColor: profile.accentColor,
                         ),
-                      if (profile.links.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          alignment: WrapAlignment.center,
+                      ),
+                      Transform.translate(
+                        offset: const Offset(0, -48),
+                        child: Column(
                           children: [
-                            for (final link in profile.links)
-                              ActionChip(
-                                avatar: const Icon(Remix.link, size: 16),
-                                label: Text(link.label),
-                                onPressed: () => _openUrl(context, link.url),
-                              ),
+                            _Avatar(
+                              url: profile.avatarUrl,
+                              size: 106,
+                              borderColor: profile.backgroundColor,
+                              borderWidth: 5,
+                              accentColor: profile.accentColor,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              profile.displayName,
+                              style: profileTheme.textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 3),
+                            Text('@${profile.username}'),
                           ],
                         ),
-                      ],
-                      if (profile.mentions.isNotEmpty) ...[
-                        const SizedBox(height: 26),
-                        Text(
-                          'People',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            for (final mention in profile.mentions)
-                              ActionChip(
-                                avatar: _Avatar(
-                                  url: mention.avatarUrl,
-                                  size: 24,
-                                ),
-                                label: Text(
-                                  '${mention.tag} · @${mention.username}',
-                                ),
-                                onPressed: () =>
-                                    context.push('/u/${mention.username}'),
+                            if (profile.bio.isNotEmpty)
+                              _BioText(
+                                text: profile.bio,
+                                textAlign: profile.bioAlignment.textAlign,
+                                linkColor: profile.accentColor,
                               ),
+                            if (profile.links.isNotEmpty) ...[
+                              const SizedBox(height: 22),
+                              Text(
+                                'Socials',
+                                style: profileTheme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.start,
+                                children: [
+                                  for (final link in profile.links)
+                                    ActionChip(
+                                      avatar: Icon(
+                                        link.platform.icon,
+                                        size: 17,
+                                        color: profile.accentColor,
+                                      ),
+                                      label: Text(
+                                        link.platform == SocialPlatform.legacy
+                                            ? link.label
+                                            : link.username,
+                                      ),
+                                      onPressed: () =>
+                                          _openUrl(context, link.url),
+                                    ),
+                                ],
+                              ),
+                            ],
+                            if (profile.mentions.isNotEmpty) ...[
+                              const SizedBox(height: 26),
+                              Text(
+                                'People',
+                                style: profileTheme.textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  for (final mention in profile.mentions)
+                                    ActionChip(
+                                      avatar: _Avatar(
+                                        url: mention.avatarUrl,
+                                        size: 24,
+                                        accentColor: profile.accentColor,
+                                      ),
+                                      label: Text(
+                                        '${mention.tag} · @${mention.username}',
+                                      ),
+                                      onPressed: () => context.push(
+                                        '/u/${mention.username}',
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
 class _Banner extends StatelessWidget {
-  const _Banner({this.url});
+  const _Banner({required this.accentColor, this.url});
 
   final String? url;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary.withValues(alpha: 0.16);
+    final color = accentColor.withValues(alpha: 0.16);
     return AspectRatio(
-      aspectRatio: 3.2,
-      child: ColoredBox(
-        color: color,
-        child: url == null
-            ? const Center(child: Icon(Remix.image_line, size: 36))
-            : Image.network(
-                url!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    const Center(child: Icon(Remix.image_line, size: 36)),
-              ),
+      aspectRatio: 3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: ColoredBox(
+          color: color,
+          child: url == null
+              ? Center(
+                  child: Icon(Remix.image_line, size: 36, color: accentColor),
+                )
+              : Image.network(
+                  url!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Center(
+                    child: Icon(Remix.image_line, size: 36, color: accentColor),
+                  ),
+                ),
+        ),
       ),
     );
   }
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.size, this.url});
+  const _Avatar({
+    required this.size,
+    required this.accentColor,
+    this.url,
+    this.borderColor,
+    this.borderWidth = 0,
+  });
 
   final double size;
   final String? url;
+  final Color accentColor;
+  final Color? borderColor;
+  final double borderWidth;
 
   @override
   Widget build(BuildContext context) {
     final fallback = ColoredBox(
-      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
-      child: const Center(child: Icon(Remix.user_line)),
+      color: accentColor.withValues(alpha: 0.16),
+      child: Center(child: Icon(Remix.user_line, color: accentColor)),
     );
     return SizedBox.square(
       dimension: size,
-      child: ClipOval(
-        child: url == null
-            ? fallback
-            : Image.network(
-                url!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => fallback,
-              ),
+      child: Container(
+        padding: EdgeInsets.all(borderWidth),
+        decoration: BoxDecoration(color: borderColor, shape: BoxShape.circle),
+        child: ClipOval(
+          child: url == null
+              ? fallback
+              : Image.network(
+                  url!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => fallback,
+                ),
+        ),
       ),
     );
   }
 }
 
 class _BioText extends StatefulWidget {
-  const _BioText({required this.text, required this.textAlign});
+  const _BioText({
+    required this.text,
+    required this.textAlign,
+    required this.linkColor,
+  });
 
   final String text;
   final TextAlign textAlign;
+  final Color linkColor;
 
   @override
   State<_BioText> createState() => _BioTextState();
@@ -263,7 +346,8 @@ class _BioTextState extends State<_BioText> {
   @override
   void didUpdateWidget(covariant _BioText oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
+    if (oldWidget.text != widget.text ||
+        oldWidget.linkColor != widget.linkColor) {
       _disposeRecognizers();
       _parse();
     }
@@ -287,8 +371,8 @@ class _BioTextState extends State<_BioText> {
       spans.add(
         TextSpan(
           text: label,
-          style: const TextStyle(
-            color: Colors.blue,
+          style: TextStyle(
+            color: widget.linkColor,
             decoration: TextDecoration.underline,
           ),
           recognizer: recognizer,

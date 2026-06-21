@@ -52,6 +52,9 @@ For public profiles, banners, bios, links and people tags, run
 `https://tishutox.github.io/Lumii/app/u/username` and the app scheme
 `lumiiquest://u/username`.
 
+If `supabase/profiles.sql` changes after the initial setup, run the complete
+file again. The migration is idempotent and adds new profile fields safely.
+
 ## Run By Platform
 
 ```bash
