@@ -47,9 +47,8 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
         appBar: AppBar(
           leading: IconButton(
             onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-            icon: const Icon(Remix.arrow_left_line),
+            icon: const Icon(Remix.arrow_left_s_line),
           ),
-          title: Text('@${widget.username}'),
           actions: [
             IconButton(
               tooltip: 'Copy profile link',
@@ -170,10 +169,20 @@ class _ProfileContent extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             if (profile.bio.isNotEmpty)
-                              _BioText(
-                                text: profile.bio,
-                                textAlign: profile.bioAlignment.textAlign,
-                                linkColor: profile.accentColor,
+                              Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 620,
+                                  ),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: _BioText(
+                                      text: profile.bio,
+                                      textAlign: profile.bioAlignment.textAlign,
+                                      linkColor: profile.accentColor,
+                                    ),
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -234,7 +243,6 @@ class _ProfileConnections extends StatelessWidget {
             icon: Remix.link,
             label: 'Socials',
             accentColor: accentColor,
-            showDropdown: true,
           ),
         ),
         if (mention != null) ...[
@@ -280,13 +288,11 @@ class _ConnectionLabel extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.accentColor,
-    this.showDropdown = false,
   });
 
   final IconData icon;
   final String label;
   final Color accentColor;
-  final bool showDropdown;
 
   @override
   Widget build(BuildContext context) {
@@ -301,10 +307,6 @@ class _ConnectionLabel extends StatelessWidget {
             label,
             style: TextStyle(color: accentColor, fontWeight: FontWeight.w700),
           ),
-          if (showDropdown) ...[
-            const SizedBox(width: 3),
-            Icon(Remix.arrow_up_down_line, size: 18, color: accentColor),
-          ],
         ],
       ),
     );

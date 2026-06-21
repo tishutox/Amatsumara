@@ -137,10 +137,31 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  Future<void> _editSocial(int index) async {
+    final result = await showDialog<ProfileLink>(
+      context: context,
+      builder: (_) => _SocialDialog(initialValue: _links[index]),
+    );
+    if (result != null && mounted) {
+      final updated = [..._links]..[index] = result;
+      setState(() => _links = sortedProfileLinks(updated));
+    }
+  }
+
   Future<void> _addMention() async {
     final result = await showDialog<ProfileMention>(
       context: context,
       builder: (_) => const _MentionDialog(),
+    );
+    if (result != null && mounted) {
+      setState(() => _mentions = [result]);
+    }
+  }
+
+  Future<void> _editMention(int index) async {
+    final result = await showDialog<ProfileMention>(
+      context: context,
+      builder: (_) => _MentionDialog(initialValue: _mentions[index]),
     );
     if (result != null && mounted) {
       setState(() => _mentions = [result]);
@@ -229,6 +250,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return SavedAppTheme(
       child: Scaffold(
         appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => context.pop(),
+            icon: const Icon(Remix.arrow_left_s_line),
+          ),
           title: const Text('Edit Profile'),
           actions: [
             TextButton(
@@ -382,11 +407,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     leading: Icon(_links[index].platform.icon),
                                     title: Text(_links[index].label),
                                     subtitle: Text(_links[index].username),
-                                    trailing: IconButton(
-                                      onPressed: () => setState(
-                                        () => _links.removeAt(index),
-                                      ),
-                                      icon: const Icon(Remix.delete_bin_line),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Edit',
+                                          onPressed: () => _editSocial(index),
+                                          icon: const Icon(Remix.edit_line),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Delete',
+                                          onPressed: () => setState(
+                                            () => _links.removeAt(index),
+                                          ),
+                                          icon: const Icon(
+                                            Remix.delete_bin_line,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                               ],
@@ -410,11 +448,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     subtitle: Text(
                                       '@${_mentions[index].username}',
                                     ),
-                                    trailing: IconButton(
-                                      onPressed: () => setState(
-                                        () => _mentions.removeAt(index),
-                                      ),
-                                      icon: const Icon(Remix.delete_bin_line),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          tooltip: 'Edit',
+                                          onPressed: () => _editMention(index),
+                                          icon: const Icon(Remix.edit_line),
+                                        ),
+                                        IconButton(
+                                          tooltip: 'Delete',
+                                          onPressed: () => setState(
+                                            () => _mentions.removeAt(index),
+                                          ),
+                                          icon: const Icon(
+                                            Remix.delete_bin_line,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                               ],
@@ -558,15 +609,28 @@ class _EditorSection extends StatelessWidget {
 }
 
 class _SocialDialog extends StatefulWidget {
-  const _SocialDialog();
+  const _SocialDialog({this.initialValue});
+
+  final ProfileLink? initialValue;
 
   @override
   State<_SocialDialog> createState() => _SocialDialogState();
 }
 
 class _SocialDialogState extends State<_SocialDialog> {
-  final _username = TextEditingController();
-  SocialPlatform _platform = SocialPlatform.instagram;
+  late final TextEditingController _username;
+  late SocialPlatform _platform;
+
+  @override
+  void initState() {
+    super.initState();
+    _username = TextEditingController(text: widget.initialValue?.username);
+    final initialPlatform = widget.initialValue?.platform;
+    _platform =
+        initialPlatform == null || initialPlatform == SocialPlatform.legacy
+        ? SocialPlatform.instagram
+        : initialPlatform;
+  }
 
   @override
   void dispose() {
@@ -577,7 +641,7 @@ class _SocialDialogState extends State<_SocialDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add social'),
+      title: Text(widget.initialValue == null ? 'Add social' : 'Edit social'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -624,7 +688,7 @@ class _SocialDialogState extends State<_SocialDialog> {
               ),
             );
           },
-          child: const Text('Add'),
+          child: Text(widget.initialValue == null ? 'Add' : 'Save'),
         ),
       ],
     );
@@ -774,15 +838,24 @@ class _ColorDialogState extends State<_ColorDialog> {
 }
 
 class _MentionDialog extends StatefulWidget {
-  const _MentionDialog();
+  const _MentionDialog({this.initialValue});
+
+  final ProfileMention? initialValue;
 
   @override
   State<_MentionDialog> createState() => _MentionDialogState();
 }
 
 class _MentionDialogState extends State<_MentionDialog> {
-  final _username = TextEditingController();
-  final _tag = TextEditingController();
+  late final TextEditingController _username;
+  late final TextEditingController _tag;
+
+  @override
+  void initState() {
+    super.initState();
+    _username = TextEditingController(text: widget.initialValue?.username);
+    _tag = TextEditingController(text: widget.initialValue?.tag);
+  }
 
   @override
   void dispose() {
@@ -794,7 +867,7 @@ class _MentionDialogState extends State<_MentionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add person'),
+      title: Text(widget.initialValue == null ? 'Add person' : 'Edit person'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -831,7 +904,7 @@ class _MentionDialogState extends State<_MentionDialog> {
               ),
             );
           },
-          child: const Text('Add'),
+          child: Text(widget.initialValue == null ? 'Add' : 'Save'),
         ),
       ],
     );

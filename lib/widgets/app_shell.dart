@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
 import 'package:lumii_quest/core/theme/app_theme.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
-import 'package:lumii_quest/core/update/apk_update.dart';
 import 'package:lumii_quest/features/chats/presentation/chats_page.dart';
 import 'package:lumii_quest/features/communities/presentation/communities_page.dart';
 import 'package:lumii_quest/features/home/presentation/home_page.dart';
@@ -26,7 +25,6 @@ class _AppShellState extends State<AppShell> {
 
   int _currentIndex = 0;
   int? _hoveredCompactIndex;
-  bool _hasShownUpdateHint = false;
   SystemColorMode _colorMode = SystemColorMode.light;
   late final StreamSubscription<AuthState> _authSubscription;
 
@@ -142,34 +140,6 @@ class _AppShellState extends State<AppShell> {
     setState(() => _colorMode = mode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(systemColorModePrefKey, mode.name);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    if (_hasShownUpdateHint) {
-      return;
-    }
-    _hasShownUpdateHint = true;
-
-    Future<void>.delayed(const Duration(seconds: 3), () {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 4),
-          content: const Text(
-            'A new version is available. Download the APK directly.',
-          ),
-          action: SnackBarAction(
-            label: 'Download',
-            onPressed: () => ApkUpdate.openLatestApk(context),
-          ),
-        ),
-      );
-    });
   }
 
   @override
