@@ -9,6 +9,7 @@ import 'package:lumii_quest/features/communities/presentation/communities_page.d
 import 'package:lumii_quest/features/home/presentation/home_page.dart';
 import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,7 +29,6 @@ class _AppShellState extends State<AppShell> {
   SystemColorMode _colorMode = SystemColorMode.light;
   late final StreamSubscription<AuthState> _authSubscription;
 
-  static const _titles = ['Discover', 'Communities', 'Chats', 'Me'];
   static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
   static const _lineIcons = [
     Remix.compass_line,
@@ -162,7 +162,12 @@ class _AppShellState extends State<AppShell> {
       child: Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
-          title: Text(_titles[_currentIndex]),
+          titleSpacing: 8,
+          title: IconButton(
+            tooltip: 'Notifications',
+            onPressed: () => context.push('/notifications'),
+            icon: const Icon(Remix.notification_line),
+          ),
           foregroundColor: navColor,
           backgroundColor: backgroundColor,
           surfaceTintColor: Colors.transparent,

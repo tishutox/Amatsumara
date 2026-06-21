@@ -21,6 +21,7 @@ class PublicProfilePage extends StatefulWidget {
 
 class _PublicProfilePageState extends State<PublicProfilePage> {
   late Future<UserProfile?> _profile;
+  UserProfile? _resolvedProfile;
 
   @override
   void initState() {
@@ -37,14 +38,24 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
   }
 
   void _load() {
+    _resolvedProfile = null;
     _profile = ProfileRepository().getByUsername(widget.username);
+    _profile.then((profile) {
+      if (mounted) setState(() => _resolvedProfile = profile);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final resolvedProfile = _resolvedProfile;
+    final profileBackground = resolvedProfile?.backgroundColor;
+    final profileAccent = resolvedProfile?.accentColor;
     return SavedAppTheme(
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: profileBackground,
+          foregroundColor: profileAccent,
+          surfaceTintColor: Colors.transparent,
           leading: IconButton(
             onPressed: () => context.canPop() ? context.pop() : context.go('/'),
             icon: const Icon(Remix.arrow_left_s_line),
@@ -102,6 +113,14 @@ class _ProfileContent extends StatelessWidget {
         : const Color(0xFFF7F5FA);
     final baseTheme = Theme.of(context);
     final profileTheme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(
+        primary: profile.accentColor,
+        surface: profile.backgroundColor,
+        onSurface: foreground,
+        surfaceContainer: profile.backgroundColor,
+        surfaceContainerHigh: profile.backgroundColor,
+        surfaceContainerHighest: profile.backgroundColor,
+      ),
       textTheme: baseTheme.textTheme.apply(
         bodyColor: foreground,
         displayColor: foreground,
@@ -112,6 +131,11 @@ class _ProfileContent extends StatelessWidget {
         selectedColor: profile.accentColor.withValues(alpha: 0.18),
         labelStyle: TextStyle(color: foreground),
         side: BorderSide(color: profile.accentColor.withValues(alpha: 0.45)),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: profile.backgroundColor,
+        surfaceTintColor: Colors.transparent,
+        textStyle: TextStyle(color: foreground),
       ),
     );
 
@@ -163,28 +187,32 @@ class _ProfileContent extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (profile.bio.isNotEmpty)
-                              Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 620,
-                                  ),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: _BioText(
-                                      text: profile.bio,
-                                      textAlign: profile.bioAlignment.textAlign,
-                                      linkColor: profile.accentColor,
+                      Transform.translate(
+                        offset: const Offset(0, -18),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (profile.bio.isNotEmpty)
+                                Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 620,
+                                    ),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: _BioText(
+                                        text: profile.bio,
+                                        textAlign:
+                                            profile.bioAlignment.textAlign,
+                                        linkColor: profile.accentColor,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
