@@ -491,7 +491,7 @@ class _SignedInProfile extends StatelessWidget {
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: onSignOut,
-                    icon: const Icon(Icons.logout_outlined),
+                    icon: const Icon(Remix.logout_box_r_line),
                     label: const Text('Sign out'),
                   ),
                 ],
