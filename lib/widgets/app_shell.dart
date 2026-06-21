@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
 import 'package:lumii_quest/core/theme/app_theme.dart';
+import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/core/update/apk_update.dart';
 import 'package:lumii_quest/features/chats/presentation/chats_page.dart';
 import 'package:lumii_quest/features/communities/presentation/communities_page.dart';
@@ -13,20 +14,6 @@ import 'package:remixicon/remixicon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum SystemColorMode { light, dark, hellaverse, glitch }
-
-class _SystemPalette {
-  const _SystemPalette({
-    required this.navColor,
-    required this.backgroundColor,
-    required this.brightness,
-  });
-
-  final Color navColor;
-  final Color backgroundColor;
-  final Brightness brightness;
-}
-
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -35,7 +22,6 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  static const String _colorModePrefKey = 'system_color_mode';
   static const double _maxContentWidth = 1160;
 
   int _currentIndex = 0;
@@ -58,29 +44,6 @@ class _AppShellState extends State<AppShell> {
     Remix.message_3_fill,
     Remix.account_circle_fill,
   ];
-
-  static const Map<SystemColorMode, _SystemPalette> _palettes = {
-    SystemColorMode.light: _SystemPalette(
-      navColor: Color(0xFF5860C3),
-      backgroundColor: Color(0xFFFFFFFF),
-      brightness: Brightness.light,
-    ),
-    SystemColorMode.dark: _SystemPalette(
-      navColor: Color(0xFF5860C3),
-      backgroundColor: Color(0xFF121212),
-      brightness: Brightness.dark,
-    ),
-    SystemColorMode.hellaverse: _SystemPalette(
-      navColor: Color(0xFFF90142),
-      backgroundColor: Color(0xFF121212),
-      brightness: Brightness.dark,
-    ),
-    SystemColorMode.glitch: _SystemPalette(
-      navColor: Color(0xFFDB5DC9),
-      backgroundColor: Color(0xFF121212),
-      brightness: Brightness.dark,
-    ),
-  };
 
   List<Widget> _buildPages(Color navColor) {
     return [
@@ -164,31 +127,21 @@ class _AppShellState extends State<AppShell> {
 
   Future<void> _loadSavedColorMode() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedMode = prefs.getString(_colorModePrefKey);
+    final savedMode = prefs.getString(systemColorModePrefKey);
     if (savedMode == null) {
       return;
     }
 
-    SystemColorMode? matchingMode;
-    for (final mode in SystemColorMode.values) {
-      if (mode.name == savedMode) {
-        matchingMode = mode;
-        break;
-      }
-    }
-
-    if (matchingMode == null || !mounted) {
+    if (!mounted) {
       return;
     }
-
-    final selectedMode = matchingMode;
-    setState(() => _colorMode = selectedMode);
+    setState(() => _colorMode = systemColorModeFromName(savedMode));
   }
 
   Future<void> _setColorMode(SystemColorMode mode) async {
     setState(() => _colorMode = mode);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_colorModePrefKey, mode.name);
+    await prefs.setString(systemColorModePrefKey, mode.name);
   }
 
   @override
@@ -224,7 +177,7 @@ class _AppShellState extends State<AppShell> {
     final width = MediaQuery.sizeOf(context).width;
     final isCompact = width < Breakpoints.compact;
     final isExpanded = width >= Breakpoints.expanded;
-    final palette = _palettes[_colorMode]!;
+    final palette = systemPalettes[_colorMode]!;
     final navColor = palette.navColor;
     final backgroundColor = palette.backgroundColor;
     final pages = _buildPages(navColor);

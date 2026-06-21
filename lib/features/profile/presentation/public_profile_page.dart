@@ -2,6 +2,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lumii_quest/core/routing/profile_links.dart';
+import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
 import 'package:remixicon/remixicon.dart';
@@ -39,48 +41,50 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-          icon: const Icon(Remix.arrow_left_line),
-        ),
-        title: Text('@${widget.username}'),
-        actions: [
-          IconButton(
-            tooltip: 'Copy profile link',
-            onPressed: () async {
-              final link =
-                  'https://tishutox.github.io/Lumii/app/u/${widget.username}';
-              await Clipboard.setData(ClipboardData(text: link));
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile link copied.')),
-                );
-              }
-            },
-            icon: const Icon(Remix.link),
+    return SavedAppTheme(
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+            icon: const Icon(Remix.arrow_left_line),
           ),
-        ],
-      ),
-      body: FutureBuilder<UserProfile?>(
-        future: _profile,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _ProfileMessage(
-              message: 'This profile could not be loaded.',
-              onRetry: () => setState(_load),
-            );
-          }
-          final profile = snapshot.data;
-          if (profile == null) {
-            return const _ProfileMessage(message: 'Profile not found.');
-          }
-          return _ProfileContent(profile: profile);
-        },
+          title: Text('@${widget.username}'),
+          actions: [
+            IconButton(
+              tooltip: 'Copy profile link',
+              onPressed: () async {
+                final link =
+                    'https://tishutox.github.io/Lumii/app/u/${widget.username}';
+                await Clipboard.setData(ClipboardData(text: link));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile link copied.')),
+                  );
+                }
+              },
+              icon: const Icon(Remix.link),
+            ),
+          ],
+        ),
+        body: FutureBuilder<UserProfile?>(
+          future: _profile,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return _ProfileMessage(
+                message: 'This profile could not be loaded.',
+                onRetry: () => setState(_load),
+              );
+            }
+            final profile = snapshot.data;
+            if (profile == null) {
+              return const _ProfileMessage(message: 'Profile not found.');
+            }
+            return _ProfileContent(profile: profile);
+          },
+        ),
       ),
     );
   }
@@ -140,7 +144,7 @@ class _ProfileContent extends StatelessWidget {
                               ActionChip(
                                 avatar: const Icon(Remix.link, size: 16),
                                 label: Text(link.label),
-                                onPressed: () => _openUrl(link.url),
+                                onPressed: () => _openUrl(context, link.url),
                               ),
                           ],
                         ),
@@ -277,7 +281,8 @@ class _BioTextState extends State<_BioText> {
       }
       final label = match.group(1) ?? match.group(3) ?? '';
       final url = match.group(2) ?? match.group(4) ?? '';
-      final recognizer = TapGestureRecognizer()..onTap = () => _openUrl(url);
+      final recognizer = TapGestureRecognizer()
+        ..onTap = () => _openUrl(context, url);
       _recognizers.add(recognizer);
       spans.add(
         TextSpan(
@@ -345,9 +350,17 @@ class _ProfileMessage extends StatelessWidget {
   }
 }
 
-Future<void> _openUrl(String value) async {
+Future<void> _openUrl(BuildContext context, String value) async {
   final uri = Uri.tryParse(value);
-  if (uri == null || !{'http', 'https'}.contains(uri.scheme)) {
+  if (uri == null) {
+    return;
+  }
+  final profileLocation = profileLocationFromUri(uri);
+  if (profileLocation != null) {
+    context.push(profileLocation);
+    return;
+  }
+  if (!{'http', 'https'}.contains(uri.scheme)) {
     return;
   }
   await launchUrl(uri, mode: LaunchMode.externalApplication);

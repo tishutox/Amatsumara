@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
+import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -225,181 +226,186 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-        actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving…' : 'Save'),
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _loadError != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(_loadError!, textAlign: TextAlign.center),
-              ),
-            )
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 760),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _ImageEditor(
-                            title: 'Profile banner',
-                            height: 190,
-                            imageProvider: _bannerBytes != null
-                                ? MemoryImage(_bannerBytes!)
-                                : !_removeBanner && _profile!.bannerUrl != null
-                                ? NetworkImage(_profile!.bannerUrl!)
-                                : null,
-                            onChange: () => _pickImage(banner: true),
-                            onRemove: () => setState(() {
-                              _bannerBytes = null;
-                              _bannerExtension = null;
-                              _removeBanner = true;
-                            }),
-                          ),
-                          const SizedBox(height: 20),
-                          _ImageEditor(
-                            title: 'Profile image',
-                            height: 120,
-                            circular: true,
-                            imageProvider: _avatarBytes != null
-                                ? MemoryImage(_avatarBytes!)
-                                : !_removeAvatar && _profile!.avatarUrl != null
-                                ? NetworkImage(_profile!.avatarUrl!)
-                                : null,
-                            onChange: () => _pickImage(banner: false),
-                            onRemove: () => setState(() {
-                              _avatarBytes = null;
-                              _avatarExtension = null;
-                              _removeAvatar = true;
-                            }),
-                          ),
-                          const SizedBox(height: 24),
-                          TextFormField(
-                            controller: _displayNameController,
-                            maxLength: 50,
-                            decoration: const InputDecoration(
-                              labelText: 'Display name',
-                              border: OutlineInputBorder(),
+    return SavedAppTheme(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Edit Profile'),
+          actions: [
+            TextButton(
+              onPressed: _saving ? null : _save,
+              child: Text(_saving ? 'Saving…' : 'Save'),
+            ),
+          ],
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _loadError != null
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(_loadError!, textAlign: TextAlign.center),
+                ),
+              )
+            : Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 760),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _ImageEditor(
+                              title: 'Profile banner',
+                              height: 190,
+                              imageProvider: _bannerBytes != null
+                                  ? MemoryImage(_bannerBytes!)
+                                  : !_removeBanner &&
+                                        _profile!.bannerUrl != null
+                                  ? NetworkImage(_profile!.bannerUrl!)
+                                  : null,
+                              onChange: () => _pickImage(banner: true),
+                              onRemove: () => setState(() {
+                                _bannerBytes = null;
+                                _bannerExtension = null;
+                                _removeBanner = true;
+                              }),
                             ),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty
-                                ? 'Display name is required.'
-                                : null,
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _bioController,
-                            minLines: 7,
-                            maxLines: 14,
-                            maxLength: 5000,
-                            textAlign: _alignment.textAlign,
-                            decoration: const InputDecoration(
-                              labelText: 'Bio',
-                              hintText: 'Links: (Text)[https://example.com]',
-                              alignLabelWithHint: true,
-                              border: OutlineInputBorder(),
+                            const SizedBox(height: 20),
+                            _ImageEditor(
+                              title: 'Profile image',
+                              height: 120,
+                              circular: true,
+                              imageProvider: _avatarBytes != null
+                                  ? MemoryImage(_avatarBytes!)
+                                  : !_removeAvatar &&
+                                        _profile!.avatarUrl != null
+                                  ? NetworkImage(_profile!.avatarUrl!)
+                                  : null,
+                              onChange: () => _pickImage(banner: false),
+                              onRemove: () => setState(() {
+                                _avatarBytes = null;
+                                _avatarExtension = null;
+                                _removeAvatar = true;
+                              }),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          DropdownButtonFormField<BioAlignment>(
-                            initialValue: _alignment,
-                            decoration: const InputDecoration(
-                              labelText: 'Bio alignment',
-                              border: OutlineInputBorder(),
+                            const SizedBox(height: 24),
+                            TextFormField(
+                              controller: _displayNameController,
+                              maxLength: 50,
+                              decoration: const InputDecoration(
+                                labelText: 'Display name',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) =>
+                                  value == null || value.trim().isEmpty
+                                  ? 'Display name is required.'
+                                  : null,
                             ),
-                            items: [
-                              for (final value in BioAlignment.values)
-                                DropdownMenuItem(
-                                  value: value,
-                                  child: Text(value.label),
-                                ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() => _alignment = value);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 26),
-                          _EditorSection(
-                            title: 'Links',
-                            description:
-                                'Add buttons or use (Text)[Link] directly in your bio.',
-                            onAdd: _addLink,
-                            children: [
-                              for (
-                                var index = 0;
-                                index < _links.length;
-                                index++
-                              )
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Remix.link),
-                                  title: Text(_links[index].label),
-                                  subtitle: Text(_links[index].url),
-                                  trailing: IconButton(
-                                    onPressed: () =>
-                                        setState(() => _links.removeAt(index)),
-                                    icon: const Icon(Remix.delete_bin_line),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _bioController,
+                              minLines: 7,
+                              maxLines: 14,
+                              maxLength: 5000,
+                              textAlign: _alignment.textAlign,
+                              decoration: const InputDecoration(
+                                labelText: 'Bio',
+                                hintText: 'Links: (Text)[https://example.com]',
+                                alignLabelWithHint: true,
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            DropdownButtonFormField<BioAlignment>(
+                              initialValue: _alignment,
+                              decoration: const InputDecoration(
+                                labelText: 'Bio alignment',
+                                border: OutlineInputBorder(),
+                              ),
+                              items: [
+                                for (final value in BioAlignment.values)
+                                  DropdownMenuItem(
+                                    value: value,
+                                    child: Text(value.label),
                                   ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          _EditorSection(
-                            title: 'People',
-                            description:
-                                'Reference another profile with your own tag (15 characters max).',
-                            onAdd: _addMention,
-                            children: [
-                              for (
-                                var index = 0;
-                                index < _mentions.length;
-                                index++
-                              )
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Remix.user_heart_line),
-                                  title: Text(_mentions[index].tag),
-                                  subtitle: Text(
-                                    '@${_mentions[index].username}',
-                                  ),
-                                  trailing: IconButton(
-                                    onPressed: () => setState(
-                                      () => _mentions.removeAt(index),
+                              ],
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _alignment = value);
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 26),
+                            _EditorSection(
+                              title: 'Links',
+                              description:
+                                  'Add buttons or use (Text)[Link] directly in your bio.',
+                              onAdd: _addLink,
+                              children: [
+                                for (
+                                  var index = 0;
+                                  index < _links.length;
+                                  index++
+                                )
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(Remix.link),
+                                    title: Text(_links[index].label),
+                                    subtitle: Text(_links[index].url),
+                                    trailing: IconButton(
+                                      onPressed: () => setState(
+                                        () => _links.removeAt(index),
+                                      ),
+                                      icon: const Icon(Remix.delete_bin_line),
                                     ),
-                                    icon: const Icon(Remix.delete_bin_line),
                                   ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 28),
-                          FilledButton.icon(
-                            onPressed: _saving ? null : _save,
-                            icon: const Icon(Remix.save_line),
-                            label: Text(_saving ? 'Saving…' : 'Save profile'),
-                          ),
-                        ],
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            _EditorSection(
+                              title: 'People',
+                              description:
+                                  'Reference another profile with your own tag (15 characters max).',
+                              onAdd: _addMention,
+                              children: [
+                                for (
+                                  var index = 0;
+                                  index < _mentions.length;
+                                  index++
+                                )
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(Remix.user_heart_line),
+                                    title: Text(_mentions[index].tag),
+                                    subtitle: Text(
+                                      '@${_mentions[index].username}',
+                                    ),
+                                    trailing: IconButton(
+                                      onPressed: () => setState(
+                                        () => _mentions.removeAt(index),
+                                      ),
+                                      icon: const Icon(Remix.delete_bin_line),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 28),
+                            FilledButton.icon(
+                              onPressed: _saving ? null : _save,
+                              icon: const Icon(Remix.save_line),
+                              label: Text(_saving ? 'Saving…' : 'Save profile'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }
