@@ -9,6 +9,8 @@ void main() {
       body: '',
       createdAt: DateTime(2026, 6, 20, 23, 59),
       isRead: false,
+      kind: 'general',
+      actionStatus: 'none',
     ),
     NotificationItem(
       id: 2,
@@ -16,6 +18,8 @@ void main() {
       body: '',
       createdAt: DateTime(2026, 6, 21, 12),
       isRead: true,
+      kind: 'friend_request',
+      actionStatus: 'pending',
     ),
   ];
 

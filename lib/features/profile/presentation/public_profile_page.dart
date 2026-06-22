@@ -4,10 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/routing/profile_links.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
+import 'package:lumii_quest/features/friends/data/friend_repository.dart';
+import 'package:lumii_quest/features/friends/domain/relationship_status.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
 import 'package:lumii_quest/features/profile/domain/social_platform.dart';
 import 'package:remixicon/remixicon.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PublicProfilePage extends StatefulWidget {
@@ -22,6 +25,9 @@ class PublicProfilePage extends StatefulWidget {
 class _PublicProfilePageState extends State<PublicProfilePage> {
   late Future<UserProfile?> _profile;
   UserProfile? _resolvedProfile;
+  final _friendRepository = FriendRepository();
+  RelationshipStatus _relationshipStatus = RelationshipStatus.signedOut;
+  bool _relationshipBusy = false;
 
   @override
   void initState() {
@@ -41,8 +47,86 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     _resolvedProfile = null;
     _profile = ProfileRepository().getByUsername(widget.username);
     _profile.then((profile) {
-      if (mounted) setState(() => _resolvedProfile = profile);
+      if (!mounted) return;
+      setState(() => _resolvedProfile = profile);
+      if (profile != null) _loadRelationship(profile);
     });
+  }
+
+  Future<void> _loadRelationship(UserProfile profile) async {
+    try {
+      final status = await _friendRepository.getStatus(profile.id);
+      if (mounted && _resolvedProfile?.id == profile.id) {
+        setState(() => _relationshipStatus = status);
+      }
+    } catch (_) {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (mounted && currentUser != null && currentUser.id != profile.id) {
+        setState(() => _relationshipStatus = RelationshipStatus.none);
+      }
+    }
+  }
+
+  Future<void> _handleRelationship() async {
+    final profile = _resolvedProfile;
+    if (profile == null || _relationshipBusy) return;
+
+    if (_relationshipStatus == RelationshipStatus.incomingPending) {
+      context.push('/notifications');
+      return;
+    }
+
+    if (_relationshipStatus == RelationshipStatus.friends) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Unfriend this person?'),
+          content: Text(
+            'Are you sure you want to remove ${profile.displayName} from your friends?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => context.pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => context.pop(true),
+              child: const Text('Unfriend'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    setState(() => _relationshipBusy = true);
+    try {
+      if (_relationshipStatus == RelationshipStatus.friends) {
+        await _friendRepository.unfriend(profile.id);
+        if (mounted) {
+          setState(() => _relationshipStatus = RelationshipStatus.none);
+          _showMessage('Friend removed.');
+        }
+      } else if (_relationshipStatus == RelationshipStatus.none) {
+        await _friendRepository.sendRequest(profile.id);
+        if (mounted) {
+          setState(
+            () => _relationshipStatus = RelationshipStatus.outgoingPending,
+          );
+          _showMessage('Friend request sent.');
+        }
+      }
+    } catch (error) {
+      if (mounted) _showMessage('Friend action failed: $error');
+    } finally {
+      if (mounted) setState(() => _relationshipBusy = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -61,6 +145,21 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
             icon: const Icon(Remix.arrow_left_s_line),
           ),
           actions: [
+            if (_showsRelationshipAction)
+              IconButton(
+                tooltip: _relationshipTooltip,
+                onPressed:
+                    _relationshipBusy ||
+                        _relationshipStatus ==
+                            RelationshipStatus.outgoingPending
+                    ? null
+                    : _handleRelationship,
+                icon: Icon(
+                  _relationshipStatus == RelationshipStatus.friends
+                      ? Remix.user_unfollow_line
+                      : Remix.user_heart_line,
+                ),
+              ),
             IconButton(
               tooltip: 'Copy profile link',
               onPressed: () async {
@@ -99,6 +198,18 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
       ),
     );
   }
+
+  bool get _showsRelationshipAction {
+    return _relationshipStatus != RelationshipStatus.signedOut &&
+        _relationshipStatus != RelationshipStatus.self;
+  }
+
+  String get _relationshipTooltip => switch (_relationshipStatus) {
+    RelationshipStatus.friends => 'Unfriend',
+    RelationshipStatus.outgoingPending => 'Friend request sent',
+    RelationshipStatus.incomingPending => 'Open friend request',
+    _ => 'Send friend request',
+  };
 }
 
 class _ProfileContent extends StatelessWidget {
