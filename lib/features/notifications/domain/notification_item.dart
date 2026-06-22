@@ -5,6 +5,9 @@ class NotificationItem {
     required this.body,
     required this.createdAt,
     required this.isRead,
+    required this.kind,
+    required this.actionStatus,
+    this.friendRequestId,
   });
 
   final int id;
@@ -12,6 +15,12 @@ class NotificationItem {
   final String body;
   final DateTime createdAt;
   final bool isRead;
+  final String kind;
+  final String actionStatus;
+  final int? friendRequestId;
+
+  bool get isFriendRequest => kind == 'friend_request';
+  bool get canRespond => isFriendRequest && actionStatus == 'pending';
 }
 
 List<NotificationItem> filterNotificationItems(

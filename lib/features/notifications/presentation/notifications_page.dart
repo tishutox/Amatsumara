@@ -19,6 +19,37 @@ class _NotificationsPageState extends State<NotificationsPage> {
   late Future<List<NotificationItem>> _notifications = _repository.getRecent();
   DateTime? _filterStart;
   DateTime? _filterEnd;
+  final Set<int> _respondingRequests = {};
+
+  Future<void> _respond(NotificationItem item, {required bool accept}) async {
+    final requestId = item.friendRequestId;
+    if (requestId == null || _respondingRequests.contains(requestId)) return;
+    setState(() => _respondingRequests.add(requestId));
+    try {
+      await _repository.respondToFriendRequest(
+        requestId: requestId,
+        accept: accept,
+      );
+      if (mounted) {
+        setState(() => _notifications = _repository.getRecent());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              accept ? 'Friend request accepted.' : 'Friend request declined.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not answer request: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _respondingRequests.remove(requestId));
+    }
+  }
 
   Future<void> _chooseFilter() async {
     final choice = await showDialog<_FilterChoice>(
@@ -161,26 +192,72 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final item = items[index];
+                    final requestId = item.friendRequestId;
+                    final isResponding =
+                        requestId != null &&
+                        _respondingRequests.contains(requestId);
                     return Card(
-                      child: ListTile(
-                        leading: Icon(
-                          item.isRead
-                              ? Remix.notification_3_line
-                              : Remix.notification_3_fill,
-                        ),
-                        title: Text(
-                          item.title,
-                          style: TextStyle(
-                            fontWeight: item.isRead
-                                ? FontWeight.w600
-                                : FontWeight.w800,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ListTile(
+                            leading: Icon(
+                              item.isRead
+                                  ? Remix.notification_3_line
+                                  : Remix.notification_3_fill,
+                            ),
+                            title: Text(
+                              item.title,
+                              style: TextStyle(
+                                fontWeight: item.isRead
+                                    ? FontWeight.w600
+                                    : FontWeight.w800,
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 5),
+                              child: Text(item.body),
+                            ),
+                            trailing: Text(
+                              formatNotificationDate(item.createdAt),
+                            ),
                           ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 5),
-                          child: Text(item.body),
-                        ),
-                        trailing: Text(formatNotificationDate(item.createdAt)),
+                          if (item.canRespond)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.end,
+                                children: [
+                                  OutlinedButton(
+                                    onPressed: isResponding
+                                        ? null
+                                        : () => _respond(item, accept: false),
+                                    child: const Text('Decline'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: isResponding
+                                        ? null
+                                        : () => _respond(item, accept: true),
+                                    child: Text(
+                                      isResponding ? 'Saving…' : 'Accept',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (item.isFriendRequest)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: _RequestStatus(
+                                  status: item.actionStatus,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },
@@ -190,6 +267,29 @@ class _NotificationsPageState extends State<NotificationsPage> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _RequestStatus extends StatelessWidget {
+  const _RequestStatus({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final accepted = status == 'accepted';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          accepted ? Remix.check_line : Remix.close_line,
+          size: 18,
+          color: accepted ? Colors.green : Theme.of(context).colorScheme.error,
+        ),
+        const SizedBox(width: 5),
+        Text(accepted ? 'Accepted' : 'Declined'),
+      ],
     );
   }
 }
