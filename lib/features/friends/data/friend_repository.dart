@@ -1,4 +1,5 @@
 import 'package:lumii_quest/features/friends/domain/relationship_status.dart';
+import 'package:lumii_quest/features/friends/domain/friend_summary.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class FriendRepository {
@@ -28,5 +29,18 @@ class FriendRepository {
       'unfriend_user',
       params: {'p_target_user_id': targetUserId},
     );
+  }
+
+  Future<List<FriendSummary>> listFriends() async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      return const [];
+    }
+    final rows = await _client.rpc('list_my_friends');
+    return (rows as List)
+        .map(
+          (row) => FriendSummary.fromDatabase(Map<String, dynamic>.from(row)),
+        )
+        .toList();
   }
 }
