@@ -142,6 +142,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return filterNotificationItems(items, start: _filterStart, end: _filterEnd);
   }
 
+  Future<void> _refresh() async {
+    final future = _repository.getRecent();
+    setState(() => _notifications = future);
+    await future;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SavedAppTheme(
@@ -153,6 +159,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
           title: const Text('Notifications'),
           actions: [
+            IconButton(
+              tooltip: 'Refresh',
+              onPressed: _refresh,
+              icon: const Icon(Remix.refresh_line),
+            ),
             IconButton(
               tooltip: 'Filter',
               onPressed: _chooseFilter,

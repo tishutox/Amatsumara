@@ -57,6 +57,12 @@ class _ChatsPageState extends State<ChatsPage> {
     setState(() => _chatsFuture = _loadChats());
   }
 
+  Future<void> _refresh() async {
+    final future = _loadChats();
+    setState(() => _chatsFuture = future);
+    await future;
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -69,7 +75,7 @@ class _ChatsPageState extends State<ChatsPage> {
     }
 
     return RefreshIndicator(
-      onRefresh: () async => _reload(),
+      onRefresh: _refresh,
       child: ListView(
         padding: ContentLayout.pagePadding,
         children: [
@@ -88,6 +94,11 @@ class _ChatsPageState extends State<ChatsPage> {
                       child: Text(
                         'Chats are end-to-end encrypted. Messages are stored on the server only as encrypted payloads.',
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Refresh',
+                      onPressed: _refresh,
+                      icon: const Icon(Remix.refresh_line),
                     ),
                   ],
                 ),

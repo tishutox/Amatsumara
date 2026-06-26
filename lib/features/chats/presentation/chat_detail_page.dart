@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
 import 'package:remixicon/remixicon.dart';
@@ -96,6 +97,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
+  Future<void> _refresh() async {
+    await _prepareEncryption();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Encryption keys refreshed.')),
+      );
+    }
+  }
+
   Future<void> _send() async {
     final text = _messageController.text.trim();
     final identity = _localIdentity;
@@ -144,41 +154,92 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => context.pop(),
-          icon: const Icon(Remix.arrow_left_s_line),
-        ),
-        title: Text(widget.displayName),
-        foregroundColor: primary,
-        surfaceTintColor: Colors.transparent,
-        actions: [
-          IconButton(
-            tooltip: 'Refresh encryption',
-            onPressed: _prepareEncryption,
-            icon: const Icon(Remix.shield_keyhole_line),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_setupError != null)
-            MaterialBanner(
-              content: Text(_setupError!),
-              leading: const Icon(Remix.lock_2_line),
+    return SavedAppTheme(
+      child: Builder(
+        builder: (context) {
+          final themedPrimary = Theme.of(context).colorScheme.primary;
+          return Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                tooltip: 'Back',
+                onPressed: () => context.pop(),
+                icon: const Icon(Remix.arrow_left_s_line),
+              ),
+              title: Text(widget.displayName),
+              foregroundColor: themedPrimary,
+              surfaceTintColor: Colors.transparent,
               actions: [
-                TextButton(
-                  onPressed: _prepareEncryption,
-                  child: const Text('Retry'),
+                IconButton(
+                  tooltip: 'Refresh',
+                  onPressed: _refresh,
+                  icon: const Icon(Remix.refresh_line),
                 ),
               ],
             ),
-          Expanded(
+            body: _ChatDetailBody(
+              setupError: _setupError,
+              repository: _repository,
+              conversationId: widget.conversationId,
+              crypto: _crypto,
+              legacyFriendPublicKey: _legacyFriendPublicKey,
+              scrollController: _scrollController,
+              messageController: _messageController,
+              friendDeviceCount: _friendDeviceCount,
+              isSending: _isSending,
+              onRefresh: _refresh,
+              onSend: _send,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ChatDetailBody extends StatelessWidget {
+  const _ChatDetailBody({
+    required this.setupError,
+    required this.repository,
+    required this.conversationId,
+    required this.crypto,
+    required this.legacyFriendPublicKey,
+    required this.scrollController,
+    required this.messageController,
+    required this.friendDeviceCount,
+    required this.isSending,
+    required this.onRefresh,
+    required this.onSend,
+  });
+
+  final String? setupError;
+  final ChatRepository repository;
+  final String conversationId;
+  final ChatCryptoService crypto;
+  final String? legacyFriendPublicKey;
+  final ScrollController scrollController;
+  final TextEditingController messageController;
+  final int friendDeviceCount;
+  final bool isSending;
+  final Future<void> Function() onRefresh;
+  final Future<void> Function() onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (setupError != null)
+          MaterialBanner(
+            content: Text(setupError!),
+            leading: const Icon(Remix.lock_2_line),
+            actions: [
+              TextButton(onPressed: onRefresh, child: const Text('Refresh')),
+            ],
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: onRefresh,
             child: StreamBuilder<List<ChatMessage>>(
-              stream: _repository.watchMessages(widget.conversationId),
+              stream: repository.watchMessages(conversationId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData) {
@@ -194,65 +255,63 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 if (messages.isEmpty) {
                   return const _ChatInfoState(
                     icon: Remix.message_3_line,
-                    message: 'No messages yet. Say hi ✨',
+                    message: 'No messages yet. Say hi.',
                   );
                 }
                 return ListView.builder(
-                  controller: _scrollController,
+                  controller: scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     return _MessageBubble(
                       message: messages[index],
-                      conversationId: widget.conversationId,
-                      crypto: _crypto,
-                      legacyFriendPublicKey: _legacyFriendPublicKey,
+                      conversationId: conversationId,
+                      crypto: crypto,
+                      legacyFriendPublicKey: legacyFriendPublicKey,
                     );
                   },
                 );
               },
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      minLines: 1,
-                      maxLines: 4,
-                      enabled: _friendDeviceCount > 0 && !_isSending,
-                      decoration: InputDecoration(
-                        hintText: _friendDeviceCount == 0
-                            ? 'Waiting for encryption key...'
-                            : 'Message',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: messageController,
+                    minLines: 1,
+                    maxLines: 4,
+                    enabled: friendDeviceCount > 0 && !isSending,
+                    decoration: InputDecoration(
+                      hintText: friendDeviceCount == 0
+                          ? 'Waiting for encryption key...'
+                          : 'Message',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                      onSubmitted: (_) => _send(),
                     ),
+                    onSubmitted: (_) => onSend(),
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _friendDeviceCount == 0 || _isSending
-                        ? null
-                        : _send,
-                    child: Icon(
-                      _isSending
-                          ? Remix.loader_4_line
-                          : Remix.send_plane_2_line,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: friendDeviceCount == 0 || isSending
+                      ? null
+                      : onSend,
+                  child: Icon(
+                    isSending ? Remix.loader_4_line : Remix.send_plane_2_line,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -300,7 +359,7 @@ class _MessageBubble extends StatelessWidget {
                 final text = snapshot.hasData
                     ? snapshot.data!
                     : snapshot.hasError
-                    ? 'Encrypted message could not be opened on this device.'
+                    ? 'This encrypted message was not prepared for this device. Refresh keys, then new messages will work here.'
                     : 'Decrypting...';
                 return Text(text, style: TextStyle(color: textColor));
               },
