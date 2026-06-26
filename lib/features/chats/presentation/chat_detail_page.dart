@@ -27,7 +27,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isSending = false;
-  String? _friendPublicKey;
+  ChatDeviceIdentity? _localIdentity;
+  List<ChatDeviceRecipient> _recipientDevices = const [];
+  int _friendDeviceCount = 0;
+  String? _legacyFriendPublicKey;
   String? _setupError;
 
   @override
@@ -45,15 +48,43 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Future<void> _prepareEncryption() async {
     try {
-      final publicKey = await _crypto.ensurePublicKey();
-      await _repository.upsertIdentityKey(publicKey);
-      final friendPublicKey = await _repository.getPublicKey(widget.friendId);
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        setState(() => _setupError = 'Sign in to use encrypted chats.');
+        return;
+      }
+      final identity = await _crypto.ensureDeviceIdentity();
+      await _repository.upsertIdentityKey(identity.publicKey);
+      await _repository.upsertDeviceKey(
+        deviceId: identity.deviceId,
+        publicKey: identity.publicKey,
+        deviceName: identity.deviceName,
+      );
+      final deviceKeys = await _repository.listActiveDeviceKeys([
+        user.id,
+        widget.friendId,
+      ]);
+      final legacyFriendPublicKey = await _repository.getPublicKey(
+        widget.friendId,
+      );
+      final friendDeviceCount = deviceKeys
+          .where((device) => device.userId == widget.friendId)
+          .length;
       if (!mounted) {
         return;
       }
       setState(() {
-        _friendPublicKey = friendPublicKey;
-        _setupError = friendPublicKey == null
+        _localIdentity = identity;
+        _recipientDevices = [
+          for (final device in deviceKeys)
+            ChatDeviceRecipient(
+              deviceId: device.deviceId,
+              publicKey: device.publicKey,
+            ),
+        ];
+        _friendDeviceCount = friendDeviceCount;
+        _legacyFriendPublicKey = legacyFriendPublicKey;
+        _setupError = friendDeviceCount == 0
             ? '${widget.displayName} needs to open Chats once before encrypted messages can be sent.'
             : null;
       });
@@ -67,20 +98,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   Future<void> _send() async {
     final text = _messageController.text.trim();
-    final recipientKey = _friendPublicKey;
-    if (text.isEmpty || recipientKey == null || _isSending) {
+    final identity = _localIdentity;
+    if (text.isEmpty ||
+        identity == null ||
+        _recipientDevices.isEmpty ||
+        _friendDeviceCount == 0 ||
+        _isSending) {
       return;
     }
 
     setState(() => _isSending = true);
     try {
-      final encrypted = await _crypto.encryptFor(
+      final encrypted = await _crypto.encryptForDevices(
         conversationId: widget.conversationId,
-        recipientPublicKey: recipientKey,
+        senderDeviceId: identity.deviceId,
+        recipients: _recipientDevices,
         message: text,
       );
       await _repository.sendMessage(
         conversationId: widget.conversationId,
+        senderDeviceId: identity.deviceId,
         encryptedPayload: encrypted.value,
       );
       _messageController.clear();
@@ -169,7 +206,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       message: messages[index],
                       conversationId: widget.conversationId,
                       crypto: _crypto,
-                      friendPublicKey: _friendPublicKey,
+                      legacyFriendPublicKey: _legacyFriendPublicKey,
                     );
                   },
                 );
@@ -187,9 +224,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       controller: _messageController,
                       minLines: 1,
                       maxLines: 4,
-                      enabled: _friendPublicKey != null && !_isSending,
+                      enabled: _friendDeviceCount > 0 && !_isSending,
                       decoration: InputDecoration(
-                        hintText: _friendPublicKey == null
+                        hintText: _friendDeviceCount == 0
                             ? 'Waiting for encryption key...'
                             : 'Message',
                         border: OutlineInputBorder(
@@ -201,7 +238,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ),
                   const SizedBox(width: 8),
                   FilledButton(
-                    onPressed: _friendPublicKey == null || _isSending
+                    onPressed: _friendDeviceCount == 0 || _isSending
                         ? null
                         : _send,
                     child: Icon(
@@ -225,13 +262,13 @@ class _MessageBubble extends StatelessWidget {
     required this.message,
     required this.conversationId,
     required this.crypto,
-    required this.friendPublicKey,
+    required this.legacyFriendPublicKey,
   });
 
   final ChatMessage message;
   final String conversationId;
   final ChatCryptoService crypto;
-  final String? friendPublicKey;
+  final String? legacyFriendPublicKey;
 
   @override
   Widget build(BuildContext context) {
@@ -257,7 +294,7 @@ class _MessageBubble extends StatelessWidget {
               future: crypto.decrypt(
                 conversationId: conversationId,
                 encryptedPayload: message.encryptedPayload,
-                remotePublicKey: isMine ? friendPublicKey : null,
+                remotePublicKey: isMine ? legacyFriendPublicKey : null,
               ),
               builder: (context, snapshot) {
                 final text = snapshot.hasData
