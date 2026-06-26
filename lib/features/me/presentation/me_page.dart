@@ -561,6 +561,9 @@ class _SignedInProfile extends StatelessWidget {
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Theme.of(context).colorScheme.error,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                     onPressed: onDeleteAccount,
                     icon: const Icon(Remix.delete_bin_line),

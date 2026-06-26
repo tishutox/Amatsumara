@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
+import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/friends/data/friend_repository.dart';
 import 'package:lumii_quest/features/friends/domain/friend_summary.dart';
 import 'package:remixicon/remixicon.dart';
@@ -28,124 +29,169 @@ class _FriendsPageState extends State<FriendsPage> {
     setState(() => _friendsFuture = _repository.listFriends());
   }
 
+  Future<void> _refresh() async {
+    final future = _repository.listFriends();
+    setState(() => _friendsFuture = future);
+    await future;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => context.pop(),
-          icon: const Icon(Remix.arrow_left_s_line),
-        ),
-        title: const Text('Friends'),
-        foregroundColor: primary,
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: _reload,
-            icon: const Icon(Remix.refresh_line),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: ContentLayout.pagePadding,
-        children: [
-          ContentLayout.widthBox(
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    DropdownButton<FriendSortField>(
-                      value: _sortField,
-                      borderRadius: BorderRadius.circular(14),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _sortField = value);
-                        }
-                      },
-                      items: FriendSortField.values
-                          .map(
-                            (field) => DropdownMenuItem(
-                              value: field,
-                              child: Text('Sort by ${field.label}'),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    DropdownButton<FriendSortDirection>(
-                      value: _sortDirection,
-                      borderRadius: BorderRadius.circular(14),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _sortDirection = value);
-                        }
-                      },
-                      items: FriendSortDirection.values
-                          .map(
-                            (direction) => DropdownMenuItem(
-                              value: direction,
-                              child: Text(direction.label),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
+    return SavedAppTheme(
+      child: Builder(
+        builder: (context) {
+          final themedPrimary = Theme.of(context).colorScheme.primary;
+          return Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                tooltip: 'Back',
+                onPressed: () => context.pop(),
+                icon: const Icon(Remix.arrow_left_s_line),
+              ),
+              title: const Text('Friends'),
+              foregroundColor: themedPrimary,
+              surfaceTintColor: Colors.transparent,
+              actions: [
+                IconButton(
+                  tooltip: 'Refresh',
+                  onPressed: _refresh,
+                  icon: const Icon(Remix.refresh_line),
                 ),
+              ],
+            ),
+            body: RefreshIndicator(
+              onRefresh: _refresh,
+              child: _FriendsBody(
+                friendsFuture: _friendsFuture,
+                sortField: _sortField,
+                sortDirection: _sortDirection,
+                onSortFieldChanged: (value) =>
+                    setState(() => _sortField = value),
+                onSortDirectionChanged: (value) =>
+                    setState(() => _sortDirection = value),
+                onReload: _reload,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FriendsBody extends StatelessWidget {
+  const _FriendsBody({
+    required this.friendsFuture,
+    required this.sortField,
+    required this.sortDirection,
+    required this.onSortFieldChanged,
+    required this.onSortDirectionChanged,
+    required this.onReload,
+  });
+
+  final Future<List<FriendSummary>> friendsFuture;
+  final FriendSortField sortField;
+  final FriendSortDirection sortDirection;
+  final ValueChanged<FriendSortField> onSortFieldChanged;
+  final ValueChanged<FriendSortDirection> onSortDirectionChanged;
+  final VoidCallback onReload;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: ContentLayout.pagePadding,
+      children: [
+        ContentLayout.widthBox(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  DropdownButton<FriendSortField>(
+                    value: sortField,
+                    borderRadius: BorderRadius.circular(14),
+                    onChanged: (value) {
+                      if (value != null) {
+                        onSortFieldChanged(value);
+                      }
+                    },
+                    items: FriendSortField.values
+                        .map(
+                          (field) => DropdownMenuItem(
+                            value: field,
+                            child: Text('Sort by ${field.label}'),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  DropdownButton<FriendSortDirection>(
+                    value: sortDirection,
+                    borderRadius: BorderRadius.circular(14),
+                    onChanged: (value) {
+                      if (value != null) {
+                        onSortDirectionChanged(value);
+                      }
+                    },
+                    items: FriendSortDirection.values
+                        .map(
+                          (direction) => DropdownMenuItem(
+                            value: direction,
+                            child: Text(direction.label),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ),
             ),
           ),
-          ContentLayout.sectionGap,
-          FutureBuilder<List<FriendSummary>>(
-            future: _friendsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return _EmptyFriendsState(
-                  icon: Remix.error_warning_line,
-                  message: 'Friends could not be loaded.',
-                  action: TextButton.icon(
-                    onPressed: _reload,
-                    icon: const Icon(Remix.refresh_line),
-                    label: const Text('Try again'),
-                  ),
-                );
-              }
-
-              final friends = sortFriends(
-                snapshot.data ?? const [],
-                field: _sortField,
-                direction: _sortDirection,
+        ),
+        ContentLayout.sectionGap,
+        FutureBuilder<List<FriendSummary>>(
+          future: friendsFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return _EmptyFriendsState(
+                icon: Remix.error_warning_line,
+                message: 'Friends could not be loaded.',
+                action: TextButton.icon(
+                  onPressed: onReload,
+                  icon: const Icon(Remix.refresh_line),
+                  label: const Text('Try again'),
+                ),
               );
-              if (friends.isEmpty) {
-                return const _EmptyFriendsState(
-                  icon: Remix.user_heart_line,
-                  message:
-                      'No friends yet. Friend requests will appear from profiles and notifications.',
-                );
-              }
+            }
 
-              return Column(
-                children: [
-                  for (final friend in friends) ...[
-                    ContentLayout.widthBox(child: _FriendTile(friend: friend)),
-                    ContentLayout.sectionGap,
-                  ],
+            final friends = sortFriends(
+              snapshot.data ?? const [],
+              field: sortField,
+              direction: sortDirection,
+            );
+            if (friends.isEmpty) {
+              return const _EmptyFriendsState(
+                icon: Remix.user_heart_line,
+                message:
+                    'No friends yet. Friend requests will appear from profiles and notifications.',
+              );
+            }
+
+            return Column(
+              children: [
+                for (final friend in friends) ...[
+                  ContentLayout.widthBox(child: _FriendTile(friend: friend)),
+                  ContentLayout.sectionGap,
                 ],
-              );
-            },
-          ),
-        ],
-      ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
