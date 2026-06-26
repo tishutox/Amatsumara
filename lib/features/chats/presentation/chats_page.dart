@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
@@ -41,7 +42,8 @@ class _ChatsPageState extends State<ChatsPage> {
 
   Future<List<ChatPreview>> _loadChats() async {
     if (Supabase.instance.client.auth.currentUser != null) {
-      await _crypto.ensureLocalDeviceSecret();
+      final publicKey = await _crypto.ensurePublicKey();
+      await _repository.upsertIdentityKey(publicKey);
     }
     return _repository.listChats();
   }
@@ -146,6 +148,15 @@ class _ChatTile extends StatelessWidget {
         : chat.displayName.trim().characters.first.toUpperCase();
     return Card(
       child: ListTile(
+        onTap: () => context.push(
+          Uri(
+            path: '/chats/${chat.conversationId}',
+            queryParameters: {
+              'friendId': chat.friendId,
+              'name': chat.displayName,
+            },
+          ).toString(),
+        ),
         leading: CircleAvatar(
           backgroundColor: primary.withValues(alpha: 0.12),
           foregroundImage: chat.avatarUrl == null
@@ -155,7 +166,7 @@ class _ChatTile extends StatelessWidget {
         ),
         title: Text(chat.displayName),
         subtitle: Text('@${chat.username}'),
-        trailing: Icon(Remix.lock_2_line, color: primary),
+        trailing: Icon(Remix.arrow_right_s_line, color: primary),
       ),
     );
   }

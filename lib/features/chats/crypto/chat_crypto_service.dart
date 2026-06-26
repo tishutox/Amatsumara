@@ -1,43 +1,132 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class EncryptedChatPayload {
+  const EncryptedChatPayload(this.value);
+
+  final Map<String, dynamic> value;
+
+  String get senderPublicKey => value['sender_public_key'] as String? ?? '';
+}
+
 class ChatCryptoService {
-  const ChatCryptoService();
+  const ChatCryptoService({String keyNamespace = 'default'})
+    : _privateKeyPref = 'lumii.chat.$keyNamespace.x25519PrivateKey.v1',
+      _publicKeyPref = 'lumii.chat.$keyNamespace.x25519PublicKey.v1';
 
-  static const _localDeviceKey = 'lumii.chat.localDeviceSecret.v1';
+  final String _privateKeyPref;
+  final String _publicKeyPref;
+  static final _x25519 = X25519();
+  static final _aes = AesGcm.with256bits();
 
-  Future<String> ensureLocalDeviceSecret() async {
-    final prefs = await SharedPreferences.getInstance();
-    final existing = prefs.getString(_localDeviceKey);
-    if (existing != null && existing.isNotEmpty) {
-      return existing;
-    }
-
-    final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
-    final encoded = base64UrlEncode(bytes);
-    await prefs.setString(_localDeviceKey, encoded);
-    return encoded;
+  Future<String> ensurePublicKey() async {
+    final keyPair = await _ensureKeyPair();
+    final publicKey = await keyPair.extractPublicKey();
+    return base64UrlEncode(publicKey.bytes);
   }
 
-  Future<String> encryptPreviewForLocalDevice(String plainText) async {
-    final secret = await ensureLocalDeviceSecret();
-    final algorithm = AesGcm.with256bits();
-    final secretKey = SecretKey(base64Url.decode(secret));
-    final nonce = algorithm.newNonce();
-    final box = await algorithm.encrypt(
-      utf8.encode(plainText),
-      secretKey: secretKey,
+  Future<EncryptedChatPayload> encryptFor({
+    required String conversationId,
+    required String recipientPublicKey,
+    required String message,
+  }) async {
+    final ownPublicKey = await ensurePublicKey();
+    final sharedSecret = await _sharedSecret(recipientPublicKey);
+    final secretBytes = await sharedSecret.extractBytes();
+    final messageKey = await _messageKey(secretBytes, conversationId);
+    final nonce = _aes.newNonce();
+    final box = await _aes.encrypt(
+      utf8.encode(message),
+      secretKey: messageKey,
       nonce: nonce,
     );
-    return jsonEncode({
+
+    return EncryptedChatPayload({
       'v': 1,
-      'alg': 'A256GCM',
+      'alg': 'X25519-A256GCM',
+      'sender_public_key': ownPublicKey,
       'nonce': base64UrlEncode(box.nonce),
       'ciphertext': base64UrlEncode(box.cipherText),
       'mac': base64UrlEncode(box.mac.bytes),
     });
+  }
+
+  Future<String> decrypt({
+    required String conversationId,
+    required Map<String, dynamic> encryptedPayload,
+    String? remotePublicKey,
+  }) async {
+    final publicKey =
+        remotePublicKey ?? encryptedPayload['sender_public_key'] as String?;
+    if (publicKey == null || publicKey.isEmpty) {
+      throw const FormatException('Missing remote key.');
+    }
+
+    final sharedSecret = await _sharedSecret(publicKey);
+    final secretBytes = await sharedSecret.extractBytes();
+    final messageKey = await _messageKey(secretBytes, conversationId);
+    final clearBytes = await _aes.decrypt(
+      SecretBox(
+        base64Url.decode(encryptedPayload['ciphertext'] as String),
+        nonce: base64Url.decode(encryptedPayload['nonce'] as String),
+        mac: Mac(base64Url.decode(encryptedPayload['mac'] as String)),
+      ),
+      secretKey: messageKey,
+    );
+    return utf8.decode(clearBytes);
+  }
+
+  Future<SimpleKeyPairData> _ensureKeyPair() async {
+    final prefs = await SharedPreferences.getInstance();
+    final privateKey = prefs.getString(_privateKeyPref);
+    final publicKey = prefs.getString(_publicKeyPref);
+    if (privateKey != null &&
+        privateKey.isNotEmpty &&
+        publicKey != null &&
+        publicKey.isNotEmpty) {
+      return SimpleKeyPairData(
+        base64Url.decode(privateKey),
+        publicKey: SimplePublicKey(
+          base64Url.decode(publicKey),
+          type: KeyPairType.x25519,
+        ),
+        type: KeyPairType.x25519,
+      );
+    }
+
+    final keyPair = await _x25519.newKeyPair();
+    final data = await keyPair.extract();
+    final generatedPublicKey = await data.extractPublicKey();
+    await prefs.setString(_privateKeyPref, base64UrlEncode(data.bytes));
+    await prefs.setString(
+      _publicKeyPref,
+      base64UrlEncode(generatedPublicKey.bytes),
+    );
+    return data;
+  }
+
+  Future<SecretKey> _sharedSecret(String remotePublicKey) async {
+    final keyPair = await _ensureKeyPair();
+    return _x25519.sharedSecretKey(
+      keyPair: keyPair,
+      remotePublicKey: SimplePublicKey(
+        base64Url.decode(remotePublicKey),
+        type: KeyPairType.x25519,
+      ),
+    );
+  }
+
+  Future<SecretKey> _messageKey(
+    List<int> sharedSecret,
+    String conversationId,
+  ) async {
+    final hmac = Hmac.sha256();
+    final mac = await hmac.calculateMac(
+      utf8.encode('Lumii chat v1:$conversationId'),
+      secretKey: SecretKey(sharedSecret),
+    );
+    return SecretKey(mac.bytes);
   }
 }
