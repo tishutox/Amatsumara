@@ -42,8 +42,13 @@ class _ChatsPageState extends State<ChatsPage> {
 
   Future<List<ChatPreview>> _loadChats() async {
     if (Supabase.instance.client.auth.currentUser != null) {
-      final publicKey = await _crypto.ensurePublicKey();
-      await _repository.upsertIdentityKey(publicKey);
+      final identity = await _crypto.ensureDeviceIdentity();
+      await _repository.upsertIdentityKey(identity.publicKey);
+      await _repository.upsertDeviceKey(
+        deviceId: identity.deviceId,
+        publicKey: identity.publicKey,
+        deviceName: identity.deviceName,
+      );
     }
     return _repository.listChats();
   }
