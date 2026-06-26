@@ -1,66 +1,209 @@
-import 'package:lumii_quest/core/responsive/content_layout.dart';
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-class ChatsPage extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:lumii_quest/core/responsive/content_layout.dart';
+import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
+import 'package:lumii_quest/features/chats/data/chat_repository.dart';
+import 'package:remixicon/remixicon.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class ChatsPage extends StatefulWidget {
   const ChatsPage({super.key});
 
   @override
+  State<ChatsPage> createState() => _ChatsPageState();
+}
+
+class _ChatsPageState extends State<ChatsPage> {
+  final _repository = ChatRepository();
+  final _crypto = ChatCryptoService();
+  late Future<List<ChatPreview>> _chatsFuture;
+  late final StreamSubscription<AuthState> _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _chatsFuture = _loadChats();
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      _,
+    ) {
+      if (mounted) {
+        setState(() => _chatsFuture = _loadChats());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
+
+  Future<List<ChatPreview>> _loadChats() async {
+    if (Supabase.instance.client.auth.currentUser != null) {
+      await _crypto.ensureLocalDeviceSecret();
+    }
+    return _repository.listChats();
+  }
+
+  void _reload() {
+    setState(() => _chatsFuture = _loadChats());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: ContentLayout.pagePadding,
-      children: const [
-        _ChatContentWidth(
-          child: _ChatTile(
-            name: 'Lena',
-            lastMessage: 'Can you check the new post?',
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      return const _ChatEmptyState(
+        icon: Remix.lock_2_line,
+        title: 'Sign in to chat',
+        message: 'Your encrypted chats will appear here after you sign in.',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => _reload(),
+      child: ListView(
+        padding: ContentLayout.pagePadding,
+        children: [
+          ContentLayout.widthBox(
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Remix.shield_keyhole_line,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Chats are end-to-end encrypted. Messages are stored on the server only as encrypted payloads.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        ContentLayout.sectionGap,
-        _ChatContentWidth(
-          child: _ChatTile(
-            name: 'Kai',
-            lastMessage: 'I am working on the community guidelines right now.',
+          ContentLayout.sectionGap,
+          FutureBuilder<List<ChatPreview>>(
+            future: _chatsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return _ChatEmptyState(
+                  icon: Remix.error_warning_line,
+                  title: 'Chats could not be loaded',
+                  message: 'Please run the updated Supabase SQL and try again.',
+                  action: TextButton.icon(
+                    onPressed: _reload,
+                    icon: const Icon(Remix.refresh_line),
+                    label: const Text('Try again'),
+                  ),
+                );
+              }
+
+              final chats = snapshot.data ?? const [];
+              if (chats.isEmpty) {
+                return const _ChatEmptyState(
+                  icon: Remix.message_3_line,
+                  title: 'No chats yet',
+                  message:
+                      'When you become friends with someone, their private chat appears here.',
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final chat in chats) ...[
+                    ContentLayout.widthBox(child: _ChatTile(chat: chat)),
+                    ContentLayout.sectionGap,
+                  ],
+                ],
+              );
+            },
           ),
-        ),
-        ContentLayout.sectionGap,
-        _ChatContentWidth(
-          child: _ChatTile(name: 'Mina', lastMessage: 'Voice chat tonight?'),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _ChatContentWidth extends StatelessWidget {
-  const _ChatContentWidth({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return ContentLayout.widthBox(child: SizedBox(height: 86, child: child));
-  }
-}
-
 class _ChatTile extends StatelessWidget {
-  const _ChatTile({required this.name, required this.lastMessage});
+  const _ChatTile({required this.chat});
 
-  final String name;
-  final String lastMessage;
+  final ChatPreview chat;
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final fallbackLetter = chat.displayName.trim().isEmpty
+        ? '?'
+        : chat.displayName.trim().characters.first.toUpperCase();
     return Card(
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: primary.withValues(alpha: 0.12),
-          child: Icon(Icons.person_outline, color: primary),
+          foregroundImage: chat.avatarUrl == null
+              ? null
+              : NetworkImage(chat.avatarUrl!),
+          child: chat.avatarUrl == null ? Text(fallbackLetter) : null,
         ),
-        title: Text(name),
-        subtitle: Text(lastMessage),
-        trailing: Icon(Icons.chevron_right, color: primary),
+        title: Text(chat.displayName),
+        subtitle: Text('@${chat.username}'),
+        trailing: Icon(Remix.lock_2_line, color: primary),
       ),
+    );
+  }
+}
+
+class _ChatEmptyState extends StatelessWidget {
+  const _ChatEmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return ListView(
+      padding: ContentLayout.pagePadding,
+      children: [
+        ContentLayout.widthBox(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Icon(icon, size: 42, color: primary),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(message, textAlign: TextAlign.center),
+                  if (action != null) ...[const SizedBox(height: 12), action!],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

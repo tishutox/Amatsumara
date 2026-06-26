@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
+import 'package:lumii_quest/features/account/data/account_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -178,6 +179,56 @@ class _MePageState extends State<MePage> {
     await Supabase.instance.client.auth.signOut();
   }
 
+  Future<void> _deleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: const Text(
+          'This permanently deletes your account, profile, friendships, notifications and chats. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Remix.delete_bin_line),
+            label: const Text('Delete account'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      await AccountRepository().deleteCurrentAccount();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your account has been deleted.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Account could not be deleted: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
   Future<void> _pickRegistrationAvatar() async {
     final image = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -259,6 +310,8 @@ class _MePageState extends State<MePage> {
           if (mounted) setState(() {});
         },
         onView: (username) => context.push('/u/$username'),
+        onFriends: () => context.push('/friends'),
+        onDeleteAccount: _isSubmitting ? null : _deleteAccount,
         onSignOut: _signOut,
       );
     }
@@ -432,12 +485,16 @@ class _SignedInProfile extends StatelessWidget {
     required this.user,
     required this.onEdit,
     required this.onView,
+    required this.onFriends,
+    required this.onDeleteAccount,
     required this.onSignOut,
   });
 
   final User user;
   final VoidCallback onEdit;
   final ValueChanged<String> onView;
+  final VoidCallback onFriends;
+  final VoidCallback? onDeleteAccount;
   final Future<void> Function() onSignOut;
 
   @override
@@ -490,9 +547,24 @@ class _SignedInProfile extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
+                    onPressed: onFriends,
+                    icon: const Icon(Remix.user_heart_line),
+                    label: const Text('Friends list'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
                     onPressed: onSignOut,
                     icon: const Icon(Remix.logout_box_r_line),
                     label: const Text('Sign out'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    onPressed: onDeleteAccount,
+                    icon: const Icon(Remix.delete_bin_line),
+                    label: const Text('Delete account'),
                   ),
                 ],
               ),
