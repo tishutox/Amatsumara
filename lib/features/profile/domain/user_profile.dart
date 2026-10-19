@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lumii_quest/features/profile/domain/social_platform.dart';
 
 enum BioAlignment {
   left,
@@ -29,34 +28,6 @@ enum BioAlignment {
   }
 }
 
-class ProfileLink {
-  const ProfileLink({
-    required this.platform,
-    required this.username,
-    required this.url,
-    this.legacyLabel,
-  });
-
-  final SocialPlatform platform;
-  final String username;
-  final String url;
-  final String? legacyLabel;
-
-  String get label => legacyLabel ?? platform.label;
-}
-
-List<ProfileLink> sortedProfileLinks(Iterable<ProfileLink> links) {
-  final sorted = links.toList();
-  sorted.sort((a, b) {
-    final platformOrder = a.platform.label.toLowerCase().compareTo(
-      b.platform.label.toLowerCase(),
-    );
-    if (platformOrder != 0) return platformOrder;
-    return a.username.toLowerCase().compareTo(b.username.toLowerCase());
-  });
-  return sorted;
-}
-
 class ProfileMention {
   const ProfileMention({
     required this.username,
@@ -78,7 +49,6 @@ class UserProfile {
     required this.displayName,
     required this.bio,
     required this.bioAlignment,
-    required this.links,
     required this.mentions,
     required this.backgroundColor,
     required this.accentColor,
@@ -93,7 +63,6 @@ class UserProfile {
   final BioAlignment bioAlignment;
   final String? avatarUrl;
   final String? bannerUrl;
-  final List<ProfileLink> links;
   final List<ProfileMention> mentions;
   final Color backgroundColor;
   final Color accentColor;
@@ -106,7 +75,6 @@ class ProfileDraft {
     required this.bioAlignment,
     required this.avatarUrl,
     required this.bannerUrl,
-    required this.links,
     required this.mentions,
     required this.backgroundColor,
     required this.accentColor,
@@ -117,7 +85,6 @@ class ProfileDraft {
   final BioAlignment bioAlignment;
   final String? avatarUrl;
   final String? bannerUrl;
-  final List<ProfileLink> links;
   final List<ProfileMention> mentions;
   final Color backgroundColor;
   final Color accentColor;

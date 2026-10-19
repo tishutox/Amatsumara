@@ -8,8 +8,7 @@ import 'package:lumii_quest/features/friends/data/friend_repository.dart';
 import 'package:lumii_quest/features/friends/domain/relationship_status.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
-import 'package:lumii_quest/features/profile/domain/social_platform.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -142,7 +141,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
             onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-            icon: const Icon(Remix.arrow_left_s_line),
+            icon: const Icon(LucideIcons.chevronLeft),
           ),
           actions: [
             if (_showsRelationshipAction)
@@ -156,8 +155,8 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
                     : _handleRelationship,
                 icon: Icon(
                   _relationshipStatus == RelationshipStatus.friends
-                      ? Remix.user_unfollow_line
-                      : Remix.user_heart_line,
+                      ? LucideIcons.userMinus
+                      : LucideIcons.userPlus,
                 ),
               ),
             IconButton(
@@ -172,7 +171,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
                   );
                 }
               },
-              icon: const Icon(Remix.link),
+              icon: const Icon(LucideIcons.link),
             ),
           ],
         ),
@@ -291,7 +290,6 @@ class _ProfileContent extends StatelessWidget {
                             ),
                             const SizedBox(height: 10),
                             _ProfileConnections(
-                              links: profile.links,
                               mention: profile.mentions.firstOrNull,
                               accentColor: profile.accentColor,
                             ),
@@ -339,115 +337,44 @@ class _ProfileContent extends StatelessWidget {
 }
 
 class _ProfileConnections extends StatelessWidget {
-  const _ProfileConnections({
-    required this.links,
-    required this.accentColor,
-    this.mention,
-  });
+  const _ProfileConnections({required this.accentColor, this.mention});
 
-  final List<ProfileLink> links;
   final ProfileMention? mention;
   final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
-    final socials = sortedProfileLinks(links);
-    if (socials.isEmpty && mention == null) return const SizedBox.shrink();
+    if (mention == null) return const SizedBox.shrink();
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PopupMenuButton<ProfileLink>(
-          enabled: socials.isNotEmpty,
-          tooltip: 'Socials',
-          onSelected: (link) => _activateSocial(context, link),
-          itemBuilder: (_) => [
-            for (final link in socials)
-              PopupMenuItem(
-                value: link,
-                child: Row(
-                  children: [
-                    Icon(link.platform.icon, size: 19, color: accentColor),
-                    const SizedBox(width: 10),
-                    Text(
-                      link.platform == SocialPlatform.legacy
-                          ? link.label
-                          : '${link.platform.label} · ${link.username}',
-                    ),
-                  ],
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.push('/u/${mention!.username}'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _Avatar(
+                  url: mention!.avatarUrl,
+                  size: 24,
+                  accentColor: accentColor,
                 ),
-              ),
-          ],
-          child: _ConnectionLabel(
-            icon: Remix.link,
-            label: 'Socials',
-            accentColor: accentColor,
-          ),
-        ),
-        if (mention != null) ...[
-          Container(
-            width: 1,
-            height: 28,
-            margin: const EdgeInsets.symmetric(horizontal: 10),
-            color: accentColor.withValues(alpha: 0.42),
-          ),
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => context.push('/u/${mention!.username}'),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _Avatar(
-                    url: mention!.avatarUrl,
-                    size: 24,
-                    accentColor: accentColor,
+                const SizedBox(width: 7),
+                Text(
+                  mention!.tag,
+                  style: TextStyle(
+                    color: accentColor,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(width: 7),
-                  Text(
-                    mention!.tag,
-                    style: TextStyle(
-                      color: accentColor,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ],
-    );
-  }
-}
-
-class _ConnectionLabel extends StatelessWidget {
-  const _ConnectionLabel({
-    required this.icon,
-    required this.label,
-    required this.accentColor,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: accentColor),
-          const SizedBox(width: 7),
-          Text(
-            label,
-            style: TextStyle(color: accentColor, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -469,13 +396,13 @@ class _Banner extends StatelessWidget {
           color: color,
           child: url == null
               ? Center(
-                  child: Icon(Remix.image_line, size: 36, color: accentColor),
+                  child: Icon(LucideIcons.image, size: 36, color: accentColor),
                 )
               : Image.network(
                   url!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Center(
-                    child: Icon(Remix.image_line, size: 36, color: accentColor),
+                    child: Icon(LucideIcons.image, size: 36, color: accentColor),
                   ),
                 ),
         ),
@@ -503,7 +430,7 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final fallback = ColoredBox(
       color: accentColor.withValues(alpha: 0.16),
-      child: Center(child: Icon(Remix.user_line, color: accentColor)),
+      child: Center(child: Icon(LucideIcons.userRound, color: accentColor)),
     );
     return SizedBox.square(
       dimension: size,
@@ -654,17 +581,4 @@ Future<void> _openUrl(BuildContext context, String value) async {
     return;
   }
   await launchUrl(uri, mode: LaunchMode.externalApplication);
-}
-
-Future<void> _activateSocial(BuildContext context, ProfileLink link) async {
-  if (link.platform.copiesUsername) {
-    await Clipboard.setData(ClipboardData(text: link.username));
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Discord username copied.')));
-    }
-    return;
-  }
-  await _openUrl(context, link.url);
 }

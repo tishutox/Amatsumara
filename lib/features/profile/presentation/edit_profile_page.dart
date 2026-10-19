@@ -4,9 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
-import 'package:lumii_quest/features/profile/domain/social_platform.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -24,7 +23,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   UserProfile? _profile;
   BioAlignment _alignment = BioAlignment.left;
-  List<ProfileLink> _links = [];
   List<ProfileMention> _mentions = [];
   Color _backgroundColor = Colors.white;
   Color _accentColor = const Color(0xFF5860C3);
@@ -77,7 +75,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       setState(() {
         _profile = profile;
         _alignment = profile.bioAlignment;
-        _links = sortedProfileLinks(profile.links);
         _mentions = profile.mentions.take(1).toList();
         _backgroundColor = profile.backgroundColor;
         _accentColor = profile.accentColor;
@@ -124,27 +121,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
       });
     } on FormatException catch (error) {
       _showMessage(error.message);
-    }
-  }
-
-  Future<void> _addSocial() async {
-    final result = await showDialog<ProfileLink>(
-      context: context,
-      builder: (_) => const _SocialDialog(),
-    );
-    if (result != null && mounted) {
-      setState(() => _links = sortedProfileLinks([..._links, result]));
-    }
-  }
-
-  Future<void> _editSocial(int index) async {
-    final result = await showDialog<ProfileLink>(
-      context: context,
-      builder: (_) => _SocialDialog(initialValue: _links[index]),
-    );
-    if (result != null && mounted) {
-      final updated = [..._links]..[index] = result;
-      setState(() => _links = sortedProfileLinks(updated));
     }
   }
 
@@ -211,7 +187,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         bioAlignment: _alignment,
         avatarUrl: avatarUrl,
         bannerUrl: bannerUrl,
-        links: _links,
         mentions: _mentions,
         backgroundColor: _backgroundColor,
         accentColor: _accentColor,
@@ -252,13 +227,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
         appBar: AppBar(
           leading: IconButton(
             onPressed: () => context.pop(),
-            icon: const Icon(Remix.arrow_left_s_line),
+            icon: const Icon(LucideIcons.chevronLeft),
           ),
           title: const Text('Edit Profile'),
           actions: [
-            TextButton(
+            TextButton.icon(
               onPressed: _saving ? null : _save,
-              child: Text(_saving ? 'Saving…' : 'Save'),
+              icon: const Icon(LucideIcons.save),
+              label: Text(_saving ? 'Saving…' : 'Save'),
             ),
           ],
         ),
@@ -348,6 +324,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             const SizedBox(height: 14),
                             DropdownButtonFormField<BioAlignment>(
                               initialValue: _alignment,
+                              icon: const Icon(LucideIcons.chevronDown),
                               decoration: const InputDecoration(
                                 labelText: 'Bio alignment',
                                 border: OutlineInputBorder(),
@@ -392,45 +369,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ),
                             const SizedBox(height: 26),
                             _EditorSection(
-                              title: 'Socials',
-                              description:
-                                  'Add your username and choose its platform.',
-                              onAdd: _addSocial,
-                              children: [
-                                for (
-                                  var index = 0;
-                                  index < _links.length;
-                                  index++
-                                )
-                                  ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: Icon(_links[index].platform.icon),
-                                    title: Text(_links[index].label),
-                                    subtitle: Text(_links[index].username),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          tooltip: 'Edit',
-                                          onPressed: () => _editSocial(index),
-                                          icon: const Icon(Remix.edit_line),
-                                        ),
-                                        IconButton(
-                                          tooltip: 'Delete',
-                                          onPressed: () => setState(
-                                            () => _links.removeAt(index),
-                                          ),
-                                          icon: const Icon(
-                                            Remix.delete_bin_line,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            _EditorSection(
                               title: 'Special person',
                               description:
                                   'Choose one profile and give the person a label (15 characters max).',
@@ -443,7 +381,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 )
                                   ListTile(
                                     contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(Remix.user_heart_line),
+                                    leading: const Icon(LucideIcons.bookHeart),
                                     title: Text(_mentions[index].tag),
                                     subtitle: Text(
                                       '@${_mentions[index].username}',
@@ -454,16 +392,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                         IconButton(
                                           tooltip: 'Edit',
                                           onPressed: () => _editMention(index),
-                                          icon: const Icon(Remix.edit_line),
+                                          icon: const Icon(
+                                            LucideIcons.pencilRuler,
+                                          ),
                                         ),
                                         IconButton(
                                           tooltip: 'Delete',
                                           onPressed: () => setState(
                                             () => _mentions.removeAt(index),
                                           ),
-                                          icon: const Icon(
-                                            Remix.delete_bin_line,
-                                          ),
+                                          icon: const Icon(LucideIcons.trash),
                                         ),
                                       ],
                                     ),
@@ -473,7 +411,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             const SizedBox(height: 28),
                             FilledButton.icon(
                               onPressed: _saving ? null : _save,
-                              icon: const Icon(Remix.save_line),
+                              icon: const Icon(LucideIcons.save),
                               label: Text(_saving ? 'Saving…' : 'Save profile'),
                             ),
                           ],
@@ -519,7 +457,7 @@ class _ImageEditor extends StatelessWidget {
               color: Theme.of(
                 context,
               ).colorScheme.primary.withValues(alpha: 0.12),
-              child: const Center(child: Icon(Remix.image_add_line, size: 36)),
+              child: const Center(child: Icon(LucideIcons.imageUp, size: 36)),
             )
           : Image(image: imageProvider!, fit: BoxFit.cover),
     );
@@ -551,12 +489,12 @@ class _ImageEditor extends StatelessWidget {
           children: [
             OutlinedButton.icon(
               onPressed: onChange,
-              icon: const Icon(Remix.image_edit_line),
+              icon: const Icon(LucideIcons.imageUp),
               label: const Text('Change'),
             ),
             TextButton.icon(
               onPressed: imageProvider == null ? null : onRemove,
-              icon: const Icon(Remix.delete_bin_line),
+              icon: const Icon(LucideIcons.trash),
               label: const Text('Remove'),
             ),
           ],
@@ -596,100 +534,13 @@ class _EditorSection extends StatelessWidget {
             ),
             OutlinedButton.icon(
               onPressed: onAdd,
-              icon: const Icon(Remix.add_line),
+              icon: const Icon(LucideIcons.plus),
               label: const Text('Add'),
             ),
           ],
         ),
         Text(description),
         ...children,
-      ],
-    );
-  }
-}
-
-class _SocialDialog extends StatefulWidget {
-  const _SocialDialog({this.initialValue});
-
-  final ProfileLink? initialValue;
-
-  @override
-  State<_SocialDialog> createState() => _SocialDialogState();
-}
-
-class _SocialDialogState extends State<_SocialDialog> {
-  late final TextEditingController _username;
-  late SocialPlatform _platform;
-
-  @override
-  void initState() {
-    super.initState();
-    _username = TextEditingController(text: widget.initialValue?.username);
-    final initialPlatform = widget.initialValue?.platform;
-    _platform =
-        initialPlatform == null || initialPlatform == SocialPlatform.legacy
-        ? SocialPlatform.instagram
-        : initialPlatform;
-  }
-
-  @override
-  void dispose() {
-    _username.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.initialValue == null ? 'Add social' : 'Edit social'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _username,
-            maxLength: 100,
-            decoration: const InputDecoration(labelText: 'Username'),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<SocialPlatform>(
-            initialValue: _platform,
-            decoration: const InputDecoration(labelText: 'Platform'),
-            items: [
-              for (final platform in SocialPlatform.selectable)
-                DropdownMenuItem(
-                  value: platform,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(platform.icon, size: 19),
-                      const SizedBox(width: 10),
-                      Text(platform.label),
-                    ],
-                  ),
-                ),
-            ],
-            onChanged: (value) {
-              if (value != null) setState(() => _platform = value);
-            },
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(onPressed: context.pop, child: const Text('Cancel')),
-        FilledButton(
-          onPressed: () {
-            final username = _username.text.trim();
-            if (username.isEmpty) return;
-            context.pop(
-              ProfileLink(
-                platform: _platform,
-                username: username,
-                url: _platform.profileUrl(username),
-              ),
-            );
-          },
-          child: Text(widget.initialValue == null ? 'Add' : 'Save'),
-        ),
       ],
     );
   }

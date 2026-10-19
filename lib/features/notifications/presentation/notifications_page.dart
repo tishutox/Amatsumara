@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/notifications/data/notification_repository.dart';
 import 'package:lumii_quest/features/notifications/domain/notification_item.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 enum _FilterChoice { singleDate, dateRange, clear }
 
@@ -60,14 +60,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
           SimpleDialogOption(
             onPressed: () => context.pop(_FilterChoice.singleDate),
             child: const ListTile(
-              leading: Icon(Remix.calendar_line),
+              leading: Icon(LucideIcons.calendar),
               title: Text('Single date'),
             ),
           ),
           SimpleDialogOption(
             onPressed: () => context.pop(_FilterChoice.dateRange),
             child: const ListTile(
-              leading: Icon(Remix.calendar_2_line),
+              leading: Icon(LucideIcons.calendarRange),
               title: Text('Date range'),
             ),
           ),
@@ -75,7 +75,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             SimpleDialogOption(
               onPressed: () => context.pop(_FilterChoice.clear),
               child: const ListTile(
-                leading: Icon(Remix.filter_off_line),
+                leading: Icon(LucideIcons.listX),
                 title: Text('Clear filter'),
               ),
             ),
@@ -155,19 +155,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
         appBar: AppBar(
           leading: IconButton(
             onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-            icon: const Icon(Remix.arrow_left_s_line),
+            icon: const Icon(LucideIcons.chevronLeft),
           ),
           title: const Text('Notifications'),
           actions: [
             IconButton(
               tooltip: 'Refresh',
               onPressed: _refresh,
-              icon: const Icon(Remix.refresh_line),
+              icon: const Icon(LucideIcons.refreshCcw),
             ),
             IconButton(
               tooltip: 'Filter',
               onPressed: _chooseFilter,
-              icon: const Icon(Remix.filter_3_line),
+              icon: const Icon(LucideIcons.listFilter),
             ),
           ],
         ),
@@ -212,11 +212,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           ListTile(
-                            leading: Icon(
-                              item.isRead
-                                  ? Remix.notification_3_line
-                                  : Remix.notification_3_fill,
-                            ),
+                            leading: const Icon(LucideIcons.bell),
                             title: Text(
                               item.title,
                               style: TextStyle(
@@ -294,7 +290,7 @@ class _RequestStatus extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
-          accepted ? Remix.check_line : Remix.close_line,
+          accepted ? LucideIcons.check : LucideIcons.x,
           size: 18,
           color: accepted ? Colors.green : Theme.of(context).colorScheme.error,
         ),
@@ -317,7 +313,7 @@ class _NotificationMessage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Remix.notification_line, size: 42),
+          const Icon(LucideIcons.bell, size: 42),
           const SizedBox(height: 12),
           Text(message),
           if (onRetry != null) ...[

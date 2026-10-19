@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _usernamePattern = RegExp(r'^[A-Za-z0-9._-]+$');
@@ -91,7 +91,7 @@ class _MePageState extends State<MePage> {
       initialDate: _birthday ?? DateTime(now.year - 18, now.month, now.day),
       firstDate: DateTime(now.year - 120),
       lastDate: now,
-      switchToInputEntryModeIcon: const Icon(Remix.pencil_line),
+      switchToInputEntryModeIcon: const Icon(LucideIcons.pencil),
     );
 
     if (selected == null) {
@@ -198,7 +198,7 @@ class _MePageState extends State<MePage> {
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(Remix.delete_bin_line),
+            icon: const Icon(LucideIcons.trash),
             label: const Text('Delete account'),
           ),
         ],
@@ -351,7 +351,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _firstNameController,
                             label: 'First name',
-                            icon: Remix.profile_line,
+                            icon: LucideIcons.idCard,
                             maxLength: 30,
                             validator: (value) =>
                                 _requiredMax(value, 'First name', 30),
@@ -359,7 +359,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _lastNameController,
                             label: 'Last name',
-                            icon: Remix.profile_line,
+                            icon: LucideIcons.idCard,
                             maxLength: 30,
                             validator: (value) =>
                                 _requiredMax(value, 'Last name', 30),
@@ -372,7 +372,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _displayNameController,
                             label: 'Display name',
-                            icon: Remix.user_line,
+                            icon: LucideIcons.userRound,
                             maxLength: 20,
                             validator: (value) =>
                                 _requiredMax(value, 'Display name', 20),
@@ -380,7 +380,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _emailController,
                             label: 'Email',
-                            icon: Remix.mail_line,
+                            icon: LucideIcons.mail,
                             keyboardType: TextInputType.emailAddress,
                             validator: _emailValidator,
                           ),
@@ -394,7 +394,7 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _usernameController,
                             label: 'Username',
-                            icon: Remix.account_circle_line,
+                            icon: LucideIcons.userRound,
                             maxLength: 20,
                             validator: _usernameValidator,
                           )
@@ -402,14 +402,14 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _emailController,
                             label: 'Email',
-                            icon: Remix.mail_line,
+                            icon: LucideIcons.mail,
                             keyboardType: TextInputType.emailAddress,
                             validator: _emailValidator,
                           ),
                         _AuthTextField(
                           controller: _passwordController,
                           label: 'Password',
-                          icon: Remix.lock_2_line,
+                          icon: LucideIcons.eyeClosed,
                           obscureText: true,
                           validator: _passwordValidator,
                         ),
@@ -422,16 +422,17 @@ class _MePageState extends State<MePage> {
                           _AuthTextField(
                             controller: _birthdayController,
                             label: 'Birthday',
-                            icon: Remix.cake_line,
+                            icon: LucideIcons.cakeSlice,
                             readOnly: true,
                             onTap: _pickBirthday,
                             validator: (value) => _required(value, 'Birthday'),
                           ),
                           DropdownButtonFormField<String>(
                             initialValue: _country,
+                            icon: const Icon(LucideIcons.chevronDown),
                             decoration: _fieldDecoration(
                               label: 'Country',
-                              icon: Remix.earth_line,
+                              icon: LucideIcons.earth,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             items: _countries
@@ -456,10 +457,10 @@ class _MePageState extends State<MePage> {
                       onPressed: _isSubmitting ? null : _submit,
                       icon: Icon(
                         _isSubmitting
-                            ? Icons.hourglass_top_rounded
+                            ? LucideIcons.hourglass
                             : isSignUp
-                            ? Icons.person_add_alt_1_outlined
-                            : Icons.login_outlined,
+                            ? LucideIcons.userPlus
+                            : LucideIcons.logIn,
                       ),
                       label: Text(
                         _isSubmitting
@@ -542,19 +543,19 @@ class _SignedInProfile extends StatelessWidget {
                   const SizedBox(height: 24),
                   FilledButton.icon(
                     onPressed: onEdit,
-                    icon: const Icon(Remix.edit_line),
+                    icon: const Icon(LucideIcons.pencilRuler),
                     label: const Text('Edit Profile'),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: onFriends,
-                    icon: const Icon(Remix.user_heart_line),
+                    icon: const Icon(LucideIcons.bookHeart),
                     label: const Text('Friends list'),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: onSignOut,
-                    icon: const Icon(Remix.logout_box_r_line),
+                    icon: const Icon(LucideIcons.logOut),
                     label: const Text('Sign out'),
                   ),
                   const SizedBox(height: 10),
@@ -566,7 +567,7 @@ class _SignedInProfile extends StatelessWidget {
                       ),
                     ),
                     onPressed: onDeleteAccount,
-                    icon: const Icon(Remix.delete_bin_line),
+                    icon: const Icon(LucideIcons.trash),
                     label: const Text('Delete account'),
                   ),
                 ],
@@ -666,12 +667,12 @@ class _AuthHeader extends StatelessWidget {
             ButtonSegment<_AuthMode>(
               value: _AuthMode.signUp,
               label: Text('Sign Up'),
-              icon: Icon(Icons.person_add_alt_1_outlined),
+              icon: Icon(LucideIcons.userPlus),
             ),
             ButtonSegment<_AuthMode>(
               value: _AuthMode.signIn,
               label: Text('Sign In'),
-              icon: Icon(Icons.login_outlined),
+              icon: Icon(LucideIcons.logIn),
             ),
           ],
           selected: {mode},
@@ -717,12 +718,12 @@ class _ProfileImagePicker extends StatelessWidget {
         _CircularProfileImage(
           size: 80,
           imageProvider: imageBytes == null ? null : MemoryImage(imageBytes!),
-          fallback: Icon(Remix.camera_line, color: primary, size: 30),
+          fallback: Icon(LucideIcons.imageUp, color: primary, size: 30),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Remix.camera_line),
+          icon: const Icon(LucideIcons.imageUp),
           label: Text(
             imageBytes == null
                 ? 'Select profile image'
@@ -808,7 +809,7 @@ class _ResponsiveFields extends StatelessWidget {
   }
 }
 
-class _AuthTextField extends StatelessWidget {
+class _AuthTextField extends StatefulWidget {
   const _AuthTextField({
     required this.controller,
     required this.label,
@@ -832,19 +833,38 @@ class _AuthTextField extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<_AuthTextField> createState() => _AuthTextFieldState();
+}
+
+class _AuthTextFieldState extends State<_AuthTextField> {
+  bool _isHidden = true;
+
+  @override
   Widget build(BuildContext context) {
+    final isPassword = widget.obscureText;
     return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      obscureText: obscureText,
-      readOnly: readOnly,
-      onTap: onTap,
-      maxLength: maxLength,
+      controller: widget.controller,
+      keyboardType: widget.keyboardType,
+      obscureText: isPassword && _isHidden,
+      readOnly: widget.readOnly,
+      onTap: widget.onTap,
+      maxLength: widget.maxLength,
       inputFormatters: [
-        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+        if (widget.maxLength != null)
+          LengthLimitingTextInputFormatter(widget.maxLength),
       ],
-      decoration: _fieldDecoration(label: label, icon: icon),
-      validator: validator,
+      decoration: _fieldDecoration(
+        label: widget.label,
+        icon: widget.icon,
+        prefix: isPassword
+            ? IconButton(
+                tooltip: _isHidden ? 'Show password' : 'Hide password',
+                onPressed: () => setState(() => _isHidden = !_isHidden),
+                icon: Icon(_isHidden ? LucideIcons.eyeClosed : LucideIcons.eye),
+              )
+            : null,
+      ),
+      validator: widget.validator,
     );
   }
 }
@@ -852,10 +872,11 @@ class _AuthTextField extends StatelessWidget {
 InputDecoration _fieldDecoration({
   required String label,
   required IconData icon,
+  Widget? prefix,
 }) {
   return InputDecoration(
     labelText: label,
-    prefixIcon: Icon(icon),
+    prefixIcon: prefix ?? Icon(icon),
     counterText: '',
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
   );

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatDetailPage extends StatefulWidget {
@@ -163,7 +163,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               leading: IconButton(
                 tooltip: 'Back',
                 onPressed: () => context.pop(),
-                icon: const Icon(Remix.arrow_left_s_line),
+                icon: const Icon(LucideIcons.chevronLeft),
               ),
               title: Text(widget.displayName),
               foregroundColor: themedPrimary,
@@ -172,7 +172,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 IconButton(
                   tooltip: 'Refresh',
                   onPressed: _refresh,
-                  icon: const Icon(Remix.refresh_line),
+                  icon: const Icon(LucideIcons.refreshCcw),
                 ),
               ],
             ),
@@ -230,7 +230,7 @@ class _ChatDetailBody extends StatelessWidget {
         if (setupError != null)
           MaterialBanner(
             content: Text(setupError!),
-            leading: const Icon(Remix.lock_2_line),
+            leading: const Icon(LucideIcons.lock),
             actions: [
               TextButton(onPressed: onRefresh, child: const Text('Refresh')),
             ],
@@ -247,14 +247,14 @@ class _ChatDetailBody extends StatelessWidget {
                 }
                 if (snapshot.hasError) {
                   return const _ChatInfoState(
-                    icon: Remix.error_warning_line,
+                    icon: LucideIcons.triangleAlert,
                     message: 'Messages could not be loaded.',
                   );
                 }
                 final messages = snapshot.data ?? const [];
                 if (messages.isEmpty) {
                   return const _ChatInfoState(
-                    icon: Remix.message_3_line,
+                    icon: LucideIcons.messageCircle,
                     message: 'No messages yet. Say hi.',
                   );
                 }
@@ -304,7 +304,7 @@ class _ChatDetailBody extends StatelessWidget {
                       ? null
                       : onSend,
                   child: Icon(
-                    isSending ? Remix.loader_4_line : Remix.send_plane_2_line,
+                    isSending ? LucideIcons.loaderCircle : LucideIcons.sendHorizontal,
                   ),
                 ),
               ],

@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatsPage extends StatefulWidget {
@@ -68,7 +68,7 @@ class _ChatsPageState extends State<ChatsPage> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       return const _ChatEmptyState(
-        icon: Remix.lock_2_line,
+        icon: LucideIcons.lock,
         title: 'Sign in to chat',
         message: 'Your encrypted chats will appear here after you sign in.',
       );
@@ -86,7 +86,7 @@ class _ChatsPageState extends State<ChatsPage> {
                 child: Row(
                   children: [
                     Icon(
-                      Remix.shield_keyhole_line,
+                      LucideIcons.shieldKeyhole,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 12),
@@ -98,7 +98,7 @@ class _ChatsPageState extends State<ChatsPage> {
                     IconButton(
                       tooltip: 'Refresh',
                       onPressed: _refresh,
-                      icon: const Icon(Remix.refresh_line),
+                      icon: const Icon(LucideIcons.refreshCcw),
                     ),
                   ],
                 ),
@@ -114,12 +114,12 @@ class _ChatsPageState extends State<ChatsPage> {
               }
               if (snapshot.hasError) {
                 return _ChatEmptyState(
-                  icon: Remix.error_warning_line,
+                  icon: LucideIcons.triangleAlert,
                   title: 'Chats could not be loaded',
                   message: 'Please run the updated Supabase SQL and try again.',
                   action: TextButton.icon(
                     onPressed: _reload,
-                    icon: const Icon(Remix.refresh_line),
+                    icon: const Icon(LucideIcons.refreshCcw),
                     label: const Text('Try again'),
                   ),
                 );
@@ -128,7 +128,7 @@ class _ChatsPageState extends State<ChatsPage> {
               final chats = snapshot.data ?? const [];
               if (chats.isEmpty) {
                 return const _ChatEmptyState(
-                  icon: Remix.message_3_line,
+                  icon: LucideIcons.messageCircle,
                   title: 'No chats yet',
                   message:
                       'When you become friends with someone, their private chat appears here.',
@@ -182,7 +182,7 @@ class _ChatTile extends StatelessWidget {
         ),
         title: Text(chat.displayName),
         subtitle: Text('@${chat.username}'),
-        trailing: Icon(Remix.arrow_right_s_line, color: primary),
+        trailing: Icon(LucideIcons.chevronRight, color: primary),
       ),
     );
   }

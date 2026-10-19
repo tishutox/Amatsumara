@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
 import 'package:lumii_quest/core/theme/app_theme.dart';
@@ -10,7 +9,7 @@ import 'package:lumii_quest/features/home/presentation/home_page.dart';
 import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -30,17 +29,11 @@ class _AppShellState extends State<AppShell> {
   late final StreamSubscription<AuthState> _authSubscription;
 
   static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
-  static const _lineIcons = [
-    Remix.compass_line,
-    Remix.collage_line,
-    Remix.message_3_line,
-    Remix.account_circle_line,
-  ];
-  static const _fillIcons = [
-    Remix.compass_fill,
-    Remix.collage_fill,
-    Remix.message_3_fill,
-    Remix.account_circle_fill,
+  static const _icons = [
+    LucideIcons.compass,
+    LucideIcons.layoutGridCircles,
+    LucideIcons.messageCircle,
+    LucideIcons.circleUserRound,
   ];
 
   List<Widget> _buildPages(Color navColor) {
@@ -96,7 +89,7 @@ class _AppShellState extends State<AppShell> {
     required Color navColor,
   }) {
     final fallback = Icon(
-      selected ? _fillIcons[index] : _lineIcons[index],
+      _icons[index],
       color: selected ? navColor : navColor.withValues(alpha: 0.72),
     );
     final avatarUrl = _avatarUrl;
@@ -166,7 +159,7 @@ class _AppShellState extends State<AppShell> {
           title: IconButton(
             tooltip: 'Notifications',
             onPressed: () => context.push('/notifications'),
-            icon: const Icon(Remix.notification_line),
+            icon: const Icon(LucideIcons.bell),
           ),
           foregroundColor: navColor,
           backgroundColor: backgroundColor,
@@ -193,14 +186,10 @@ class _AppShellState extends State<AppShell> {
                         value: _colorMode,
                         borderRadius: BorderRadius.circular(12),
                         dropdownColor: backgroundColor,
-                        // Uses the same s-line family shape as arrow-down-s-line.
-                        icon: Transform.rotate(
-                          angle: math.pi,
-                          child: Icon(
-                            Remix.arrow_up_s_line,
-                            color: navColor,
-                            size: 18,
-                          ),
+                        icon: Icon(
+                          LucideIcons.chevronDown,
+                          color: navColor,
+                          size: 18,
                         ),
                         iconEnabledColor: navColor,
                         style: TextStyle(

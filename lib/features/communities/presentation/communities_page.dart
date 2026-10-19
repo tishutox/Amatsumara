@@ -1,5 +1,6 @@
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class CommunitiesPage extends StatelessWidget {
   const CommunitiesPage({super.key});
@@ -28,14 +29,14 @@ class CommunitiesPage extends StatelessWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: primary.withValues(alpha: 0.15),
-                    child: Icon(Icons.groups_2_outlined, color: primary),
+                    child: Icon(LucideIcons.usersRoundCollaboration, color: primary),
                   ),
                   title: Text(communities[index]),
                   subtitle: Text(
                     '0 new posts',
                     style: TextStyle(color: primary),
                   ),
-                  trailing: Icon(Icons.chevron_right, color: primary),
+                  trailing: Icon(LucideIcons.chevronRight, color: primary),
                 ),
               ),
             ),

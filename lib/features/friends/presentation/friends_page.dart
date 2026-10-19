@@ -4,7 +4,7 @@ import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/friends/data/friend_repository.dart';
 import 'package:lumii_quest/features/friends/domain/friend_summary.dart';
-import 'package:remixicon/remixicon.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -46,7 +46,7 @@ class _FriendsPageState extends State<FriendsPage> {
               leading: IconButton(
                 tooltip: 'Back',
                 onPressed: () => context.pop(),
-                icon: const Icon(Remix.arrow_left_s_line),
+                icon: const Icon(LucideIcons.chevronLeft),
               ),
               title: const Text('Friends'),
               foregroundColor: themedPrimary,
@@ -55,7 +55,7 @@ class _FriendsPageState extends State<FriendsPage> {
                 IconButton(
                   tooltip: 'Refresh',
                   onPressed: _refresh,
-                  icon: const Icon(Remix.refresh_line),
+                  icon: const Icon(LucideIcons.refreshCcw),
                 ),
               ],
             ),
@@ -112,6 +112,7 @@ class _FriendsBody extends StatelessWidget {
                 children: [
                   DropdownButton<FriendSortField>(
                     value: sortField,
+                    icon: const Icon(LucideIcons.chevronDown),
                     borderRadius: BorderRadius.circular(14),
                     onChanged: (value) {
                       if (value != null) {
@@ -129,6 +130,7 @@ class _FriendsBody extends StatelessWidget {
                   ),
                   DropdownButton<FriendSortDirection>(
                     value: sortDirection,
+                    icon: const Icon(LucideIcons.chevronDown),
                     borderRadius: BorderRadius.circular(14),
                     onChanged: (value) {
                       if (value != null) {
@@ -158,11 +160,11 @@ class _FriendsBody extends StatelessWidget {
             }
             if (snapshot.hasError) {
               return _EmptyFriendsState(
-                icon: Remix.error_warning_line,
+                icon: LucideIcons.triangleAlert,
                 message: 'Friends could not be loaded.',
                 action: TextButton.icon(
                   onPressed: onReload,
-                  icon: const Icon(Remix.refresh_line),
+                  icon: const Icon(LucideIcons.refreshCcw),
                   label: const Text('Try again'),
                 ),
               );
@@ -175,7 +177,7 @@ class _FriendsBody extends StatelessWidget {
             );
             if (friends.isEmpty) {
               return const _EmptyFriendsState(
-                icon: Remix.user_heart_line,
+                icon: LucideIcons.bookHeart,
                 message:
                     'No friends yet. Friend requests will appear from profiles and notifications.',
               );
@@ -219,7 +221,7 @@ class _FriendTile extends StatelessWidget {
         ),
         title: Text(friend.displayName),
         subtitle: Text('@${friend.username}'),
-        trailing: Icon(Remix.arrow_right_s_line, color: primary),
+        trailing: Icon(LucideIcons.chevronRight, color: primary),
       ),
     );
   }
