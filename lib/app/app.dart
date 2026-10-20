@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
@@ -49,7 +49,7 @@ class _LumiiQuestAppState extends State<LumiiQuestApp> {
     return MaterialApp.router(
       title: 'Lumii Quest',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: AppTheme.dark(),
       routerConfig: appRouter,
     );
   }

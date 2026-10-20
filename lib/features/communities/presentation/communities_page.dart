@@ -29,7 +29,10 @@ class CommunitiesPage extends StatelessWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: primary.withValues(alpha: 0.15),
-                    child: Icon(LucideIcons.usersRoundCollaboration, color: primary),
+                    child: Icon(
+                      LucideIcons.usersRoundCollaboration,
+                      color: primary,
+                    ),
                   ),
                   title: Text(communities[index]),
                   subtitle: Text(

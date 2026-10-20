@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/routing/profile_links.dart';
-import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/friends/data/friend_repository.dart';
 import 'package:lumii_quest/features/friends/domain/relationship_status.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
@@ -13,9 +12,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class PublicProfilePage extends StatefulWidget {
-  const PublicProfilePage({required this.username, super.key});
+  const PublicProfilePage({
+    required this.username,
+
+    this.embedded = false,
+
+    this.onEdit,
+
+    super.key,
+  });
 
   final String username;
+
+  final bool embedded;
+
+  final VoidCallback? onEdit;
 
   @override
   State<PublicProfilePage> createState() => _PublicProfilePageState();
@@ -133,68 +144,98 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
     final resolvedProfile = _resolvedProfile;
     final profileBackground = resolvedProfile?.backgroundColor;
     final profileAccent = resolvedProfile?.accentColor;
-    return SavedAppTheme(
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: profileBackground,
-          foregroundColor: profileAccent,
-          surfaceTintColor: Colors.transparent,
-          leading: IconButton(
-            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-            icon: const Icon(LucideIcons.chevronLeft),
-          ),
-          actions: [
-            if (_showsRelationshipAction)
-              IconButton(
-                tooltip: _relationshipTooltip,
-                onPressed:
-                    _relationshipBusy ||
-                        _relationshipStatus ==
-                            RelationshipStatus.outgoingPending
-                    ? null
-                    : _handleRelationship,
-                icon: Icon(
-                  _relationshipStatus == RelationshipStatus.friends
-                      ? LucideIcons.userMinus
-                      : LucideIcons.userPlus,
+    return Scaffold(
+      appBar: widget.embedded
+          ? null
+          : AppBar(
+              backgroundColor: profileBackground,
+              foregroundColor: profileAccent,
+              surfaceTintColor: Colors.transparent,
+              leading: IconButton(
+                onPressed: () =>
+                    context.canPop() ? context.pop() : context.go('/'),
+                icon: const Icon(LucideIcons.chevronLeft),
+              ),
+              actions: [
+                if (_showsRelationshipAction)
+                  IconButton(
+                    tooltip: _relationshipTooltip,
+                    onPressed:
+                        _relationshipBusy ||
+                            _relationshipStatus ==
+                                RelationshipStatus.outgoingPending
+                        ? null
+                        : _handleRelationship,
+                    icon: Icon(
+                      _relationshipStatus == RelationshipStatus.friends
+                          ? LucideIcons.userMinus
+                          : LucideIcons.userPlus,
+                    ),
+                  ),
+                _copyLinkButton(),
+              ],
+            ),
+      body: FutureBuilder<UserProfile?>(
+        future: _profile,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return _ProfileMessage(
+              message: 'This profile could not be loaded.',
+              onRetry: () => setState(_load),
+            );
+          }
+          final profile = snapshot.data;
+          if (profile == null) {
+            return const _ProfileMessage(message: 'Profile not found.');
+          }
+          final content = _ProfileContent(profile: profile);
+
+          if (!widget.embedded) return content;
+
+          return Column(
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+
+                  children: [
+                    if (widget.onEdit != null)
+                      IconButton(
+                        tooltip: 'Edit profile',
+
+                        onPressed: widget.onEdit,
+
+                        icon: const Icon(LucideIcons.pencilRuler),
+                      ),
+
+                    _copyLinkButton(),
+                  ],
                 ),
               ),
-            IconButton(
-              tooltip: 'Copy profile link',
-              onPressed: () async {
-                final link =
-                    'https://tishutox.github.io/Lumii/app/u/${widget.username}';
-                await Clipboard.setData(ClipboardData(text: link));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile link copied.')),
-                  );
-                }
-              },
-              icon: const Icon(LucideIcons.link),
-            ),
-          ],
-        ),
-        body: FutureBuilder<UserProfile?>(
-          future: _profile,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return _ProfileMessage(
-                message: 'This profile could not be loaded.',
-                onRetry: () => setState(_load),
-              );
-            }
-            final profile = snapshot.data;
-            if (profile == null) {
-              return const _ProfileMessage(message: 'Profile not found.');
-            }
-            return _ProfileContent(profile: profile);
-          },
-        ),
+
+              Expanded(child: content),
+            ],
+          );
+        },
       ),
+    );
+  }
+
+  Widget _copyLinkButton() {
+    return IconButton(
+      tooltip: 'Copy profile link',
+      onPressed: () async {
+        final link =
+            'https://tishutox.github.io/Lumii/app/u/${widget.username}';
+        await Clipboard.setData(ClipboardData(text: link));
+        if (mounted) _showMessage('Profile link copied.');
+      },
+      icon: const Icon(LucideIcons.link),
     );
   }
 
@@ -402,7 +443,11 @@ class _Banner extends StatelessWidget {
                   url!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Center(
-                    child: Icon(LucideIcons.image, size: 36, color: accentColor),
+                    child: Icon(
+                      LucideIcons.image,
+                      size: 36,
+                      color: accentColor,
+                    ),
                   ),
                 ),
         ),

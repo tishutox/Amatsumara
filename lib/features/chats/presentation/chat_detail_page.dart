@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -154,44 +153,42 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SavedAppTheme(
-      child: Builder(
-        builder: (context) {
-          final themedPrimary = Theme.of(context).colorScheme.primary;
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                tooltip: 'Back',
-                onPressed: () => context.pop(),
-                icon: const Icon(LucideIcons.chevronLeft),
+    return Builder(
+      builder: (context) {
+        final themedPrimary = Theme.of(context).colorScheme.primary;
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              tooltip: 'Back',
+              onPressed: () => context.pop(),
+              icon: const Icon(LucideIcons.chevronLeft),
+            ),
+            title: Text(widget.displayName),
+            foregroundColor: themedPrimary,
+            surfaceTintColor: Colors.transparent,
+            actions: [
+              IconButton(
+                tooltip: 'Refresh',
+                onPressed: _refresh,
+                icon: const Icon(LucideIcons.refreshCcw),
               ),
-              title: Text(widget.displayName),
-              foregroundColor: themedPrimary,
-              surfaceTintColor: Colors.transparent,
-              actions: [
-                IconButton(
-                  tooltip: 'Refresh',
-                  onPressed: _refresh,
-                  icon: const Icon(LucideIcons.refreshCcw),
-                ),
-              ],
-            ),
-            body: _ChatDetailBody(
-              setupError: _setupError,
-              repository: _repository,
-              conversationId: widget.conversationId,
-              crypto: _crypto,
-              legacyFriendPublicKey: _legacyFriendPublicKey,
-              scrollController: _scrollController,
-              messageController: _messageController,
-              friendDeviceCount: _friendDeviceCount,
-              isSending: _isSending,
-              onRefresh: _refresh,
-              onSend: _send,
-            ),
-          );
-        },
-      ),
+            ],
+          ),
+          body: _ChatDetailBody(
+            setupError: _setupError,
+            repository: _repository,
+            conversationId: widget.conversationId,
+            crypto: _crypto,
+            legacyFriendPublicKey: _legacyFriendPublicKey,
+            scrollController: _scrollController,
+            messageController: _messageController,
+            friendDeviceCount: _friendDeviceCount,
+            isSending: _isSending,
+            onRefresh: _refresh,
+            onSend: _send,
+          ),
+        );
+      },
     );
   }
 }
@@ -304,7 +301,9 @@ class _ChatDetailBody extends StatelessWidget {
                       ? null
                       : onSend,
                   child: Icon(
-                    isSending ? LucideIcons.loaderCircle : LucideIcons.sendHorizontal,
+                    isSending
+                        ? LucideIcons.loaderCircle
+                        : LucideIcons.sendHorizontal,
                   ),
                 ),
               ],

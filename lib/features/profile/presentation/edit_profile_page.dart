@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
-import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -222,206 +221,202 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SavedAppTheme(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(LucideIcons.chevronLeft),
-          ),
-          title: const Text('Edit Profile'),
-          actions: [
-            TextButton.icon(
-              onPressed: _saving ? null : _save,
-              icon: const Icon(LucideIcons.save),
-              label: Text(_saving ? 'Saving…' : 'Save'),
-            ),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(LucideIcons.chevronLeft),
         ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _loadError != null
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(_loadError!, textAlign: TextAlign.center),
-                ),
-              )
-            : Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(20),
-                  children: [
-                    Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 760),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _ImageEditor(
-                              title: 'Profile image',
-                              height: 120,
-                              circular: true,
-                              imageProvider: _avatarBytes != null
-                                  ? MemoryImage(_avatarBytes!)
-                                  : !_removeAvatar &&
-                                        _profile!.avatarUrl != null
-                                  ? NetworkImage(_profile!.avatarUrl!)
-                                  : null,
-                              onChange: () => _pickImage(banner: false),
-                              onRemove: () => setState(() {
-                                _avatarBytes = null;
-                                _avatarExtension = null;
-                                _removeAvatar = true;
-                              }),
+        title: const Text('Edit Profile'),
+        actions: [
+          TextButton.icon(
+            onPressed: _saving ? null : _save,
+            icon: const Icon(LucideIcons.save),
+            label: Text(_saving ? 'Saving…' : 'Save'),
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _loadError != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(_loadError!, textAlign: TextAlign.center),
+              ),
+            )
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ImageEditor(
+                            title: 'Profile image',
+                            height: 120,
+                            circular: true,
+                            imageProvider: _avatarBytes != null
+                                ? MemoryImage(_avatarBytes!)
+                                : !_removeAvatar && _profile!.avatarUrl != null
+                                ? NetworkImage(_profile!.avatarUrl!)
+                                : null,
+                            onChange: () => _pickImage(banner: false),
+                            onRemove: () => setState(() {
+                              _avatarBytes = null;
+                              _avatarExtension = null;
+                              _removeAvatar = true;
+                            }),
+                          ),
+                          const SizedBox(height: 20),
+                          _ImageEditor(
+                            title: 'Profile banner',
+                            aspectRatio: 3,
+                            recommendation:
+                                'Recommended size: 1500 × 500 px (3:1)',
+                            imageProvider: _bannerBytes != null
+                                ? MemoryImage(_bannerBytes!)
+                                : !_removeBanner && _profile!.bannerUrl != null
+                                ? NetworkImage(_profile!.bannerUrl!)
+                                : null,
+                            onChange: () => _pickImage(banner: true),
+                            onRemove: () => setState(() {
+                              _bannerBytes = null;
+                              _bannerExtension = null;
+                              _removeBanner = true;
+                            }),
+                          ),
+                          const SizedBox(height: 24),
+                          TextFormField(
+                            controller: _displayNameController,
+                            maxLength: 50,
+                            decoration: const InputDecoration(
+                              labelText: 'Display name',
+                              border: OutlineInputBorder(),
                             ),
-                            const SizedBox(height: 20),
-                            _ImageEditor(
-                              title: 'Profile banner',
-                              aspectRatio: 3,
-                              recommendation:
-                                  'Recommended size: 1500 × 500 px (3:1)',
-                              imageProvider: _bannerBytes != null
-                                  ? MemoryImage(_bannerBytes!)
-                                  : !_removeBanner &&
-                                        _profile!.bannerUrl != null
-                                  ? NetworkImage(_profile!.bannerUrl!)
-                                  : null,
-                              onChange: () => _pickImage(banner: true),
-                              onRemove: () => setState(() {
-                                _bannerBytes = null;
-                                _bannerExtension = null;
-                                _removeBanner = true;
-                              }),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                ? 'Display name is required.'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _bioController,
+                            minLines: 7,
+                            maxLines: 14,
+                            maxLength: 5000,
+                            textAlign: _alignment.textAlign,
+                            decoration: const InputDecoration(
+                              labelText: 'Bio',
+                              hintText: 'Links: (Text)[https://example.com]',
+                              alignLabelWithHint: true,
+                              border: OutlineInputBorder(),
                             ),
-                            const SizedBox(height: 24),
-                            TextFormField(
-                              controller: _displayNameController,
-                              maxLength: 50,
-                              decoration: const InputDecoration(
-                                labelText: 'Display name',
-                                border: OutlineInputBorder(),
-                              ),
-                              validator: (value) =>
-                                  value == null || value.trim().isEmpty
-                                  ? 'Display name is required.'
-                                  : null,
+                          ),
+                          const SizedBox(height: 14),
+                          DropdownButtonFormField<BioAlignment>(
+                            initialValue: _alignment,
+                            icon: const Icon(LucideIcons.chevronDown),
+                            decoration: const InputDecoration(
+                              labelText: 'Bio alignment',
+                              border: OutlineInputBorder(),
                             ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _bioController,
-                              minLines: 7,
-                              maxLines: 14,
-                              maxLength: 5000,
-                              textAlign: _alignment.textAlign,
-                              decoration: const InputDecoration(
-                                labelText: 'Bio',
-                                hintText: 'Links: (Text)[https://example.com]',
-                                alignLabelWithHint: true,
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            DropdownButtonFormField<BioAlignment>(
-                              initialValue: _alignment,
-                              icon: const Icon(LucideIcons.chevronDown),
-                              decoration: const InputDecoration(
-                                labelText: 'Bio alignment',
-                                border: OutlineInputBorder(),
-                              ),
-                              items: [
-                                for (final value in BioAlignment.values)
-                                  DropdownMenuItem(
-                                    value: value,
-                                    child: Text(value.label),
-                                  ),
-                              ],
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() => _alignment = value);
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 26),
-                            Text(
-                              'Profile colors',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                _ColorPickerField(
-                                  label: 'Background',
-                                  color: _backgroundColor,
-                                  onChanged: (color) =>
-                                      setState(() => _backgroundColor = color),
+                            items: [
+                              for (final value in BioAlignment.values)
+                                DropdownMenuItem(
+                                  value: value,
+                                  child: Text(value.label),
                                 ),
-                                _ColorPickerField(
-                                  label: 'Links & icons',
-                                  color: _accentColor,
-                                  onChanged: (color) =>
-                                      setState(() => _accentColor = color),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 26),
-                            _EditorSection(
-                              title: 'Special person',
-                              description:
-                                  'Choose one profile and give the person a label (15 characters max).',
-                              onAdd: _addMention,
-                              children: [
-                                for (
-                                  var index = 0;
-                                  index < _mentions.length;
-                                  index++
-                                )
-                                  ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(LucideIcons.bookHeart),
-                                    title: Text(_mentions[index].tag),
-                                    subtitle: Text(
-                                      '@${_mentions[index].username}',
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          tooltip: 'Edit',
-                                          onPressed: () => _editMention(index),
-                                          icon: const Icon(
-                                            LucideIcons.pencilRuler,
-                                          ),
-                                        ),
-                                        IconButton(
-                                          tooltip: 'Delete',
-                                          onPressed: () => setState(
-                                            () => _mentions.removeAt(index),
-                                          ),
-                                          icon: const Icon(LucideIcons.trash),
-                                        ),
-                                      ],
-                                    ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() => _alignment = value);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 26),
+                          Text(
+                            'Profile colors',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _ColorPickerField(
+                                label: 'Background',
+                                color: _backgroundColor,
+                                onChanged: (color) =>
+                                    setState(() => _backgroundColor = color),
+                              ),
+                              _ColorPickerField(
+                                label: 'Links & icons',
+                                color: _accentColor,
+                                onChanged: (color) =>
+                                    setState(() => _accentColor = color),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 26),
+                          _EditorSection(
+                            title: 'Special person',
+                            description:
+                                'Choose one profile and give the person a label (15 characters max).',
+                            onAdd: _addMention,
+                            children: [
+                              for (
+                                var index = 0;
+                                index < _mentions.length;
+                                index++
+                              )
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(LucideIcons.bookHeart),
+                                  title: Text(_mentions[index].tag),
+                                  subtitle: Text(
+                                    '@${_mentions[index].username}',
                                   ),
-                              ],
-                            ),
-                            const SizedBox(height: 28),
-                            FilledButton.icon(
-                              onPressed: _saving ? null : _save,
-                              icon: const Icon(LucideIcons.save),
-                              label: Text(_saving ? 'Saving…' : 'Save profile'),
-                            ),
-                          ],
-                        ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: 'Edit',
+                                        onPressed: () => _editMention(index),
+                                        icon: const Icon(
+                                          LucideIcons.pencilRuler,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Delete',
+                                        onPressed: () => setState(
+                                          () => _mentions.removeAt(index),
+                                        ),
+                                        icon: const Icon(LucideIcons.trash),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 28),
+                          FilledButton.icon(
+                            onPressed: _saving ? null : _save,
+                            icon: const Icon(LucideIcons.save),
+                            label: Text(_saving ? 'Saving…' : 'Save profile'),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-      ),
+            ),
     );
   }
 }

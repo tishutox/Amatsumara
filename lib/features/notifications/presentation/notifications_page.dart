@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/notifications/data/notification_repository.dart';
 import 'package:lumii_quest/features/notifications/domain/notification_item.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -150,129 +149,125 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SavedAppTheme(
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-            icon: const Icon(LucideIcons.chevronLeft),
-          ),
-          title: const Text('Notifications'),
-          actions: [
-            IconButton(
-              tooltip: 'Refresh',
-              onPressed: _refresh,
-              icon: const Icon(LucideIcons.refreshCcw),
-            ),
-            IconButton(
-              tooltip: 'Filter',
-              onPressed: _chooseFilter,
-              icon: const Icon(LucideIcons.listFilter),
-            ),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+          icon: const Icon(LucideIcons.chevronLeft),
         ),
-        body: FutureBuilder<List<NotificationItem>>(
-          future: _notifications,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return _NotificationMessage(
-                message: 'Notifications could not be loaded.',
-                onRetry: () =>
-                    setState(() => _notifications = _repository.getRecent()),
-              );
-            }
+        title: const Text('Notifications'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _refresh,
+            icon: const Icon(LucideIcons.refreshCcw),
+          ),
+          IconButton(
+            tooltip: 'Filter',
+            onPressed: _chooseFilter,
+            icon: const Icon(LucideIcons.listFilter),
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<NotificationItem>>(
+        future: _notifications,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return _NotificationMessage(
+              message: 'Notifications could not be loaded.',
+              onRetry: () =>
+                  setState(() => _notifications = _repository.getRecent()),
+            );
+          }
 
-            final items = _filtered(snapshot.data ?? const []);
-            if (items.isEmpty) {
-              return _NotificationMessage(
-                message: _filterStart == null
-                    ? 'No notifications yet.'
-                    : 'No notifications in this period.',
-              );
-            }
+          final items = _filtered(snapshot.data ?? const []);
+          if (items.isEmpty) {
+            return _NotificationMessage(
+              message: _filterStart == null
+                  ? 'No notifications yet.'
+                  : 'No notifications in this period.',
+            );
+          }
 
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final requestId = item.friendRequestId;
-                    final isResponding =
-                        requestId != null &&
-                        _respondingRequests.contains(requestId);
-                    return Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          ListTile(
-                            leading: const Icon(LucideIcons.bell),
-                            title: Text(
-                              item.title,
-                              style: TextStyle(
-                                fontWeight: item.isRead
-                                    ? FontWeight.w600
-                                    : FontWeight.w800,
-                              ),
-                            ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 5),
-                              child: Text(item.body),
-                            ),
-                            trailing: Text(
-                              formatNotificationDate(item.createdAt),
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(20),
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final requestId = item.friendRequestId;
+                  final isResponding =
+                      requestId != null &&
+                      _respondingRequests.contains(requestId);
+                  return Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ListTile(
+                          leading: const Icon(LucideIcons.bell),
+                          title: Text(
+                            item.title,
+                            style: TextStyle(
+                              fontWeight: item.isRead
+                                  ? FontWeight.w600
+                                  : FontWeight.w800,
                             ),
                           ),
-                          if (item.canRespond)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                alignment: WrapAlignment.end,
-                                children: [
-                                  OutlinedButton(
-                                    onPressed: isResponding
-                                        ? null
-                                        : () => _respond(item, accept: false),
-                                    child: const Text('Decline'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: isResponding
-                                        ? null
-                                        : () => _respond(item, accept: true),
-                                    child: Text(
-                                      isResponding ? 'Saving…' : 'Accept',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else if (item.isFriendRequest)
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: _RequestStatus(
-                                  status: item.actionStatus,
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Text(item.body),
+                          ),
+                          trailing: Text(
+                            formatNotificationDate(item.createdAt),
+                          ),
+                        ),
+                        if (item.canRespond)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.end,
+                              children: [
+                                OutlinedButton(
+                                  onPressed: isResponding
+                                      ? null
+                                      : () => _respond(item, accept: false),
+                                  child: const Text('Decline'),
                                 ),
-                              ),
+                                FilledButton(
+                                  onPressed: isResponding
+                                      ? null
+                                      : () => _respond(item, accept: true),
+                                  child: Text(
+                                    isResponding ? 'Saving…' : 'Accept',
+                                  ),
+                                ),
+                              ],
                             ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                          )
+                        else if (item.isFriendRequest)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: _RequestStatus(status: item.actionStatus),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

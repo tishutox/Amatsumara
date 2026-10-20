@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
-import 'package:lumii_quest/core/theme/saved_app_theme.dart';
 import 'package:lumii_quest/features/friends/data/friend_repository.dart';
 import 'package:lumii_quest/features/friends/domain/friend_summary.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -37,44 +36,41 @@ class _FriendsPageState extends State<FriendsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return SavedAppTheme(
-      child: Builder(
-        builder: (context) {
-          final themedPrimary = Theme.of(context).colorScheme.primary;
-          return Scaffold(
-            appBar: AppBar(
-              leading: IconButton(
-                tooltip: 'Back',
-                onPressed: () => context.pop(),
-                icon: const Icon(LucideIcons.chevronLeft),
-              ),
-              title: const Text('Friends'),
-              foregroundColor: themedPrimary,
-              surfaceTintColor: Colors.transparent,
-              actions: [
-                IconButton(
-                  tooltip: 'Refresh',
-                  onPressed: _refresh,
-                  icon: const Icon(LucideIcons.refreshCcw),
-                ),
-              ],
+    return Builder(
+      builder: (context) {
+        final themedPrimary = Theme.of(context).colorScheme.primary;
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              tooltip: 'Back',
+              onPressed: () => context.pop(),
+              icon: const Icon(LucideIcons.chevronLeft),
             ),
-            body: RefreshIndicator(
-              onRefresh: _refresh,
-              child: _FriendsBody(
-                friendsFuture: _friendsFuture,
-                sortField: _sortField,
-                sortDirection: _sortDirection,
-                onSortFieldChanged: (value) =>
-                    setState(() => _sortField = value),
-                onSortDirectionChanged: (value) =>
-                    setState(() => _sortDirection = value),
-                onReload: _reload,
+            title: const Text('Friends'),
+            foregroundColor: themedPrimary,
+            surfaceTintColor: Colors.transparent,
+            actions: [
+              IconButton(
+                tooltip: 'Refresh',
+                onPressed: _refresh,
+                icon: const Icon(LucideIcons.refreshCcw),
               ),
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: _refresh,
+            child: _FriendsBody(
+              friendsFuture: _friendsFuture,
+              sortField: _sortField,
+              sortDirection: _sortDirection,
+              onSortFieldChanged: (value) => setState(() => _sortField = value),
+              onSortDirectionChanged: (value) =>
+                  setState(() => _sortDirection = value),
+              onReload: _reload,
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

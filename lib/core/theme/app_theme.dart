@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData light() {
+  static ThemeData dark() {
     return system(
       primary: const Color(0xFF5860C3),
-      background: Colors.white,
-      brightness: Brightness.light,
+      background: const Color(0xFF121212),
+      brightness: Brightness.dark,
     );
   }
 
