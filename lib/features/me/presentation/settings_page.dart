@@ -215,13 +215,18 @@ class _ProfileHeader extends StatelessWidget {
               AspectRatio(aspectRatio: 3, child: _banner(primary)),
               Positioned(
                 top: 8,
-                left: 8,
+                right: 8,
                 child: Material(
                   color: surface.withValues(alpha: 0.92),
                   shape: const CircleBorder(),
                   child: IconButton(
                     tooltip: 'Edit profile',
                     onPressed: onEdit,
+                    padding: const EdgeInsets.all(6),
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
                     icon: Icon(LucideIcons.pencilRuler, color: primary),
                   ),
                 ),
@@ -234,7 +239,7 @@ class _ProfileHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Transform.translate(
-                  offset: const Offset(0, -36),
+                  offset: const Offset(0, -24),
                   child: _avatar(primary, surface),
                 ),
                 Text(

@@ -148,29 +148,31 @@ class _AppShellState extends State<AppShell> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [
-          if (_currentIndex == 3 && _username != null) ...[
-            IconButton(
-              tooltip: 'Edit profile',
-              onPressed: _editProfile,
-              icon: const Icon(LucideIcons.pencilRuler),
-            ),
-            IconButton(
-              tooltip: 'Copy profile link',
-              onPressed: _copyProfileLink,
-              icon: const Icon(LucideIcons.link),
-            ),
+          if (_username != null) ...[
+            if (_currentIndex == 3) ...[
+              IconButton(
+                tooltip: 'Copy profile link',
+                onPressed: _copyProfileLink,
+                icon: const Icon(LucideIcons.link),
+              ),
+              IconButton(
+                tooltip: 'Edit profile',
+                onPressed: _editProfile,
+                icon: const Icon(LucideIcons.pencilRuler),
+              ),
+            ] else ...[
+              IconButton(
+                tooltip: 'Friends list',
+                onPressed: () => context.push('/friends'),
+                icon: const Icon(LucideIcons.bookHeart),
+              ),
+              IconButton(
+                tooltip: 'Settings',
+                onPressed: () => context.push('/settings'),
+                icon: const Icon(LucideIcons.bolt),
+              ),
+            ],
           ],
-          IconButton(
-            tooltip: 'Friends list',
-            onPressed: () => context.push('/friends'),
-            icon: const Icon(LucideIcons.users),
-          ),
-          IconButton(
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
-            icon: const Icon(LucideIcons.bolt),
-          ),
-
           const SizedBox(width: 8),
         ],
       ),
