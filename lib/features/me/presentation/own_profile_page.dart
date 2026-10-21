@@ -1,14 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:lumii_quest/features/profile/presentation/public_profile_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// "Me" tab: shows the signed-in user's own profile, or the sign-in form.
 class OwnProfilePage extends StatefulWidget {
-  const OwnProfilePage({super.key});
+  const OwnProfilePage({this.reloadCount = 0, super.key});
+
+  final int reloadCount;
 
   @override
   State<OwnProfilePage> createState() => _OwnProfilePageState();
@@ -16,7 +17,6 @@ class OwnProfilePage extends StatefulWidget {
 
 class _OwnProfilePageState extends State<OwnProfilePage> {
   late final StreamSubscription<AuthState> _authSubscription;
-  int _reloadCount = 0;
 
   @override
   void initState() {
@@ -34,11 +34,6 @@ class _OwnProfilePageState extends State<OwnProfilePage> {
     super.dispose();
   }
 
-  Future<void> _edit() async {
-    await context.push<bool>('/edit-profile');
-    if (mounted) setState(() => _reloadCount++);
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -48,10 +43,9 @@ class _OwnProfilePageState extends State<OwnProfilePage> {
     }
 
     return PublicProfilePage(
-      key: ValueKey('$username-$_reloadCount'),
+      key: ValueKey('$username-${widget.reloadCount}'),
       username: username,
       embedded: true,
-      onEdit: _edit,
     );
   }
 }

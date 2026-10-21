@@ -195,32 +195,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
 
           if (!widget.embedded) return content;
 
-          return Column(
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-
-                  children: [
-                    if (widget.onEdit != null)
-                      IconButton(
-                        tooltip: 'Edit profile',
-
-                        onPressed: widget.onEdit,
-
-                        icon: const Icon(LucideIcons.pencilRuler),
-                      ),
-
-                    _copyLinkButton(),
-                  ],
-                ),
-              ),
-
-              Expanded(child: content),
-            ],
-          );
+          return content;
         },
       ),
     );

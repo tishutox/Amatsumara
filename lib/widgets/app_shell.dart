@@ -6,6 +6,7 @@ import 'package:lumii_quest/features/communities/presentation/communities_page.d
 import 'package:lumii_quest/features/home/presentation/home_page.dart';
 import 'package:lumii_quest/features/me/presentation/own_profile_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -24,6 +25,7 @@ class _AppShellState extends State<AppShell> {
   static const Color _backgroundColor = Color(0xFF121212);
 
   int _currentIndex = 0;
+  int _profileReloadCount = 0;
   int? _hoveredCompactIndex;
   late final StreamSubscription<AuthState> _authSubscription;
 
@@ -31,7 +33,7 @@ class _AppShellState extends State<AppShell> {
   static const _icons = [
     LucideIcons.compass,
     LucideIcons.layoutGridCircles,
-    LucideIcons.messageCircle,
+    LucideIcons.messagesCircle,
     LucideIcons.circleUserRound,
   ];
 
@@ -40,7 +42,7 @@ class _AppShellState extends State<AppShell> {
       HomePage(navIconColor: navColor),
       const CommunitiesPage(),
       const ChatsPage(),
-      const OwnProfilePage(),
+      OwnProfilePage(reloadCount: _profileReloadCount),
     ];
   }
 
@@ -66,6 +68,28 @@ class _AppShellState extends State<AppShell> {
     final value =
         Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'];
     return value is String && value.isNotEmpty ? value : null;
+  }
+
+  String? get _username {
+    final value =
+        Supabase.instance.client.auth.currentUser?.userMetadata?['username'];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  Future<void> _editProfile() async {
+    await context.push<bool>('/edit-profile');
+    if (mounted) setState(() => _profileReloadCount++);
+  }
+
+  Future<void> _copyProfileLink() async {
+    await Clipboard.setData(
+      ClipboardData(text: 'https://tishutox.github.io/Lumii/app/u/$_username'),
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile link copied.')));
+    }
   }
 
   Widget _navigationIcon({
@@ -124,12 +148,27 @@ class _AppShellState extends State<AppShell> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [
+          if (_currentIndex == 3 && _username != null) ...[
+            IconButton(
+              tooltip: 'Edit profile',
+              onPressed: _editProfile,
+              icon: const Icon(LucideIcons.pencilRuler),
+            ),
+            IconButton(
+              tooltip: 'Copy profile link',
+              onPressed: _copyProfileLink,
+              icon: const Icon(LucideIcons.link),
+            ),
+          ],
+          IconButton(
+            tooltip: 'Friends list',
+            onPressed: () => context.push('/friends'),
+            icon: const Icon(LucideIcons.users),
+          ),
           IconButton(
             tooltip: 'Settings',
-
             onPressed: () => context.push('/settings'),
-
-            icon: const Icon(LucideIcons.settings),
+            icon: const Icon(LucideIcons.bolt),
           ),
 
           const SizedBox(width: 8),
