@@ -40,6 +40,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final _recorder = AudioRecorder();
   bool _isSending = false;
   bool _isRecording = false;
+  bool _showAttachMenu = false;
   StreamSubscription<Amplitude>? _amplitudeSub;
   DateTime? _recordingStartedAt;
   final List<double> _amplitudes = [];
@@ -243,6 +244,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
+  void _toggleAttachMenu() {
+    setState(() => _showAttachMenu = !_showAttachMenu);
+  }
+
+  Future<void> _pickSticker() async {
+    setState(() => _showAttachMenu = false);
+    _showError('Stickers are coming soon.');
+  }
+
   Future<void> _toggleRecording() async {
     if (_isRecording) {
       await _cancelRecording();
@@ -385,6 +395,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             onToggleRecording: _toggleRecording,
             onCancelRecording: _cancelRecording,
             onFinishRecording: _finishRecording,
+            showAttachMenu: _showAttachMenu,
+            onToggleAttachMenu: _toggleAttachMenu,
+            onPickSticker: _pickSticker,
           ),
         );
       },
@@ -412,6 +425,9 @@ class _ChatDetailBody extends StatelessWidget {
     required this.onToggleRecording,
     required this.onCancelRecording,
     required this.onFinishRecording,
+    required this.showAttachMenu,
+    required this.onToggleAttachMenu,
+    required this.onPickSticker,
   });
 
   final String? setupError;
@@ -432,6 +448,9 @@ class _ChatDetailBody extends StatelessWidget {
   final Future<void> Function() onToggleRecording;
   final Future<void> Function() onCancelRecording;
   final Future<void> Function() onFinishRecording;
+  final bool showAttachMenu;
+  final VoidCallback onToggleAttachMenu;
+  final Future<void> Function() onPickSticker;
 
   @override
   Widget build(BuildContext context) {
@@ -487,7 +506,17 @@ class _ChatDetailBody extends StatelessWidget {
         ),
         SafeArea(
           top: false,
-          child: _buildInput(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showAttachMenu)
+                _AttachMenu(
+                  onGallery: onPickImages,
+                  onSticker: onPickSticker,
+                ),
+              _buildInput(context),
+            ],
+          ),
         ),
       ],
     );
@@ -506,8 +535,9 @@ class _ChatDetailBody extends StatelessWidget {
         controller: messageController,
         friendDeviceCount: friendDeviceCount,
         isSending: isSending,
+        showAttachMenu: showAttachMenu,
         onSend: onSend,
-        onPickImages: onPickImages,
+        onToggleAttachMenu: onToggleAttachMenu,
         onToggleRecording: onToggleRecording,
       );
     }
@@ -525,16 +555,18 @@ class _MediaInputBar extends StatelessWidget {
     required this.controller,
     required this.friendDeviceCount,
     required this.isSending,
+    required this.showAttachMenu,
     required this.onSend,
-    required this.onPickImages,
+    required this.onToggleAttachMenu,
     required this.onToggleRecording,
   });
 
   final TextEditingController controller;
   final int friendDeviceCount;
   final bool isSending;
+  final bool showAttachMenu;
   final Future<void> Function() onSend;
-  final Future<void> Function() onPickImages;
+  final VoidCallback onToggleAttachMenu;
   final Future<void> Function() onToggleRecording;
 
   @override
@@ -591,15 +623,97 @@ class _MediaInputBar extends StatelessWidget {
                     : onToggleRecording,
                 icon: Icon(LucideIcons.mic, color: primary),
               ),
-              _CircleIconButton(
-                tooltip: 'Send images',
-                icon: LucideIcons.circlePlus,
-                backgroundColor: primary,
-                iconColor: Colors.white,
-                size: 32,
-                onPressed: canSend ? onPickImages : null,
+              AnimatedRotation(
+                turns: showAttachMenu ? 0.125 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: _CircleIconButton(
+                  tooltip: 'Attach',
+                  icon: LucideIcons.circlePlus,
+                  backgroundColor: primary,
+                  iconColor: Colors.white,
+                  onPressed: canSend ? onToggleAttachMenu : null,
+                ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttachMenu extends StatelessWidget {
+  const _AttachMenu({required this.onGallery, required this.onSticker});
+
+  final VoidCallback onGallery;
+  final VoidCallback onSticker;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: Material(
+          color: surface,
+          elevation: 4,
+          shadowColor: Colors.black54,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _AttachOption(
+                  icon: LucideIcons.image,
+                  label: 'Gallery',
+                  color: primary,
+                  onTap: onGallery,
+                ),
+                const SizedBox(width: 4),
+                _AttachOption(
+                  icon: LucideIcons.sticker,
+                  label: 'Sticker',
+                  color: primary,
+                  onTap: onSticker,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AttachOption extends StatelessWidget {
+  const _AttachOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 6),
+            Text(label),
           ],
         ),
       ),
@@ -714,7 +828,6 @@ class _CircleIconButton extends StatelessWidget {
     required this.backgroundColor,
     required this.iconColor,
     this.onPressed,
-    this.size = 40,
   });
 
   final String tooltip;
@@ -722,7 +835,6 @@ class _CircleIconButton extends StatelessWidget {
   final Color backgroundColor;
   final Color iconColor;
   final VoidCallback? onPressed;
-  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -730,14 +842,14 @@ class _CircleIconButton extends StatelessWidget {
       color: backgroundColor,
       shape: const CircleBorder(),
       child: SizedBox(
-        width: size,
-        height: size,
+        width: 40,
+        height: 40,
         child: IconButton(
           tooltip: tooltip,
           onPressed: onPressed,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
-          icon: Icon(icon, color: iconColor, size: size * 0.55),
+          icon: Icon(icon, color: iconColor, size: 22),
         ),
       ),
     );
@@ -813,18 +925,16 @@ class _MessageBubble extends StatelessWidget {
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
-        child: Card(
-          color: bubbleColor,
-          clipBehavior: Clip.antiAlias,
-          child: FutureBuilder<String>(
-            future: crypto.decrypt(
-              conversationId: conversationId,
-              encryptedPayload: message.encryptedPayload,
-              remotePublicKey: isMine ? legacyFriendPublicKey : null,
-            ),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Padding(
+        child: FutureBuilder<String>(
+          future: crypto.decrypt(
+            conversationId: conversationId,
+            encryptedPayload: message.encryptedPayload,
+            remotePublicKey: isMine ? legacyFriendPublicKey : null,
+          ),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return _bubble(
+                Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
@@ -833,21 +943,27 @@ class _MessageBubble extends StatelessWidget {
                     'This encrypted message was not prepared for this device. Refresh keys, then new messages will work here.',
                     style: TextStyle(color: textColor),
                   ),
-                );
-              }
-              if (!snapshot.hasData) {
-                return Padding(
+                ),
+                bubbleColor,
+              );
+            }
+            if (!snapshot.hasData) {
+              return _bubble(
+                Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
                   ),
                   child: Text('Decrypting...', style: TextStyle(color: textColor)),
-                );
-              }
-              final content = ChatMessageContent.decode(snapshot.data!);
-              switch (content.kind) {
-                case ChatMessageKind.text:
-                  return Padding(
+                ),
+                bubbleColor,
+              );
+            }
+            final content = ChatMessageContent.decode(snapshot.data!);
+            switch (content.kind) {
+              case ChatMessageKind.text:
+                return _bubble(
+                  Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 10,
@@ -856,28 +972,40 @@ class _MessageBubble extends StatelessWidget {
                       content.text ?? '',
                       style: TextStyle(color: textColor),
                     ),
-                  );
-                case ChatMessageKind.image:
-                  return _ImageMessageBubble(url: content.url!);
-                case ChatMessageKind.audio:
-                  return _AudioMessageBubble(
+                  ),
+                  bubbleColor,
+                );
+              case ChatMessageKind.image:
+                return _ImageMessageBubble(url: content.url!);
+              case ChatMessageKind.audio:
+                return _bubble(
+                  _AudioMessageBubble(
                     url: content.url!,
                     duration: content.duration ?? 0,
                     textColor: textColor,
-                  );
-                case ChatMessageKind.gallery:
-                  return _GalleryBubble(
-                    images: content.images ?? const [],
-                    onTap: () => _openGallery(
-                      context,
-                      content.images ?? const [],
-                    ),
-                  );
-              }
-            },
-          ),
+                  ),
+                  bubbleColor,
+                );
+              case ChatMessageKind.gallery:
+                return _GalleryBubble(
+                  images: content.images ?? const [],
+                  onTap: () => _openGallery(
+                    context,
+                    content.images ?? const [],
+                  ),
+                );
+            }
+          },
         ),
       ),
+    );
+  }
+
+  Widget _bubble(Widget child, Color color) {
+    return Card(
+      color: color,
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 
@@ -907,52 +1035,31 @@ class _GalleryBubble extends StatelessWidget {
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(4),
-        child: switch (images.length) {
-          1 => _galleryTile(images.first, tile),
-          2 || 3 => _stack(images, tile),
-          _ => _grid(images, tile),
-        },
+        child: images.length == 1
+            ? _galleryTile(images.first, tile)
+            : _stack(images, tile),
       ),
     );
   }
 
   Widget _stack(List<ChatImageItem> images, Size tile) {
     return SizedBox(
-      width: tile.width + (images.length - 1) * _offset,
-      height: tile.height + (images.length - 1) * _offset,
+      width: tile.width + (images.length - 1) * _offset + 16,
+      height: tile.height + (images.length - 1) * _offset + 16,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           for (var i = images.length - 1; i >= 0; i--)
             Positioned(
               left: i * _offset,
               top: i * _offset,
-              child: _galleryTile(images[i], tile),
+              child: Transform.rotate(
+                angle: _stackAngle(i),
+                child: _galleryTile(images[i], tile),
+              ),
             ),
         ],
       ),
-    );
-  }
-
-  Widget _grid(List<ChatImageItem> images, Size tile) {
-    final rows = <List<ChatImageItem>>[];
-    for (var i = 0; i < images.length; i += 2) {
-      rows.add(images.sublist(i, (i + 2) > images.length ? images.length : i + 2));
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        for (final row in rows)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final image in row)
-                Padding(
-                  padding: const EdgeInsets.all(1.5),
-                  child: _galleryTile(image, tile),
-                ),
-            ],
-          ),
-      ],
     );
   }
 
@@ -978,6 +1085,12 @@ class _GalleryBubble extends StatelessWidget {
   }
 }
 
+double _stackAngle(int index) {
+  if (index == 0) return 0;
+  final direction = index.isOdd ? -1.0 : 1.0;
+  return direction * 0.07; // ~4 degrees
+}
+
 class _ImageMessageBubble extends StatelessWidget {
   const _ImageMessageBubble({required this.url});
 
@@ -985,26 +1098,29 @@ class _ImageMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 360),
-      child: Image.network(
-        url,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.medium,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) {
-            return child;
-          }
-          return const SizedBox(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Image.network(
+          url,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.medium,
+          loadingBuilder: (context, child, progress) {
+            if (progress == null) {
+              return child;
+            }
+            return const SizedBox(
+              width: 220,
+              height: 160,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          },
+          errorBuilder: (_, _, _) => const SizedBox(
             width: 220,
-            height: 160,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        },
-        errorBuilder: (_, _, _) => const SizedBox(
-          width: 220,
-          height: 120,
-          child: Center(child: Icon(LucideIcons.imageOff)),
+            height: 120,
+            child: Center(child: Icon(LucideIcons.imageOff)),
+          ),
         ),
       ),
     );
