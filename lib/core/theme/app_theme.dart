@@ -5,7 +5,7 @@ class AppTheme {
 
   static ThemeData dark() {
     return system(
-      primary: const Color(0xFF5860C3),
+      primary: const Color(0xFFFF1438),
       background: const Color(0xFF121212),
       brightness: Brightness.dark,
     );

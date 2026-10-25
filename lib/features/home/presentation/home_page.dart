@@ -20,7 +20,6 @@ class _HomePageState extends State<HomePage> {
     'banners/Switzerland.png',
   ];
 
-  final PageController _pageController = PageController();
   Timer? _bannerTimer;
   int _currentBannerIndex = 0;
   List<double>? _bannerAspectRatios;
@@ -61,23 +60,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _bannerTimer?.cancel();
-    _pageController.dispose();
     super.dispose();
   }
 
   void _startBannerTimer() {
     _bannerTimer?.cancel();
     _bannerTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!_pageController.hasClients) {
+      if (!mounted) {
         return;
       }
-
-      final nextIndex = (_currentBannerIndex + 1) % _bannerPaths.length;
-      _pageController.animateToPage(
-        nextIndex,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOut,
-      );
+      setState(() {
+        _currentBannerIndex = (_currentBannerIndex + 1) % _bannerPaths.length;
+      });
     });
   }
 
@@ -88,27 +82,17 @@ class _HomePageState extends State<HomePage> {
     if (isMobile) {
       return _MobileDiscoverContent(
         bannerPaths: _bannerPaths,
-        pageController: _pageController,
         currentBannerIndex: _currentBannerIndex,
         bannerAspectRatio: bannerAspectRatio,
         navIconColor: widget.navIconColor,
-        onPageChanged: (index) {
-          setState(() => _currentBannerIndex = index);
-        },
-        onManualSlide: _startBannerTimer,
       );
     }
 
     return _LargeDiscoverContent(
       bannerPaths: _bannerPaths,
-      pageController: _pageController,
       currentBannerIndex: _currentBannerIndex,
       bannerAspectRatio: bannerAspectRatio,
       navIconColor: widget.navIconColor,
-      onPageChanged: (index) {
-        setState(() => _currentBannerIndex = index);
-      },
-      onManualSlide: _startBannerTimer,
     );
   }
 }
@@ -116,21 +100,15 @@ class _HomePageState extends State<HomePage> {
 class _MobileDiscoverContent extends StatelessWidget {
   const _MobileDiscoverContent({
     required this.bannerPaths,
-    required this.pageController,
     required this.currentBannerIndex,
     required this.bannerAspectRatio,
     required this.navIconColor,
-    required this.onPageChanged,
-    required this.onManualSlide,
   });
 
   final List<String> bannerPaths;
-  final PageController pageController;
   final int currentBannerIndex;
   final double bannerAspectRatio;
   final Color navIconColor;
-  final ValueChanged<int> onPageChanged;
-  final VoidCallback onManualSlide;
 
   @override
   Widget build(BuildContext context) {
@@ -140,13 +118,10 @@ class _MobileDiscoverContent extends StatelessWidget {
         ContentLayout.widthBox(
           child: _BannerCarouselWidget(
             bannerPaths: bannerPaths,
-            pageController: pageController,
             currentBannerIndex: currentBannerIndex,
             bannerAspectRatio: bannerAspectRatio,
             navIconColor: navIconColor,
-            onPageChanged: onPageChanged,
-            onManualSlide: onManualSlide,
-            borderRadius: 22,
+            borderRadius: 14,
             margin: EdgeInsets.zero,
           ),
         ),
@@ -177,21 +152,15 @@ class _MobileDiscoverContent extends StatelessWidget {
 class _LargeDiscoverContent extends StatelessWidget {
   const _LargeDiscoverContent({
     required this.bannerPaths,
-    required this.pageController,
     required this.currentBannerIndex,
     required this.bannerAspectRatio,
     required this.navIconColor,
-    required this.onPageChanged,
-    required this.onManualSlide,
   });
 
   final List<String> bannerPaths;
-  final PageController pageController;
   final int currentBannerIndex;
   final double bannerAspectRatio;
   final Color navIconColor;
-  final ValueChanged<int> onPageChanged;
-  final VoidCallback onManualSlide;
 
   @override
   Widget build(BuildContext context) {
@@ -206,13 +175,10 @@ class _LargeDiscoverContent extends StatelessWidget {
               children: [
                 _BannerCarouselWidget(
                   bannerPaths: bannerPaths,
-                  pageController: pageController,
                   currentBannerIndex: currentBannerIndex,
                   bannerAspectRatio: bannerAspectRatio,
                   navIconColor: navIconColor,
-                  onPageChanged: onPageChanged,
-                  onManualSlide: onManualSlide,
-                  borderRadius: 28,
+                  borderRadius: 16,
                   margin: const EdgeInsets.only(bottom: 22),
                 ),
                 const _ComingSoonCard(
@@ -256,23 +222,17 @@ class _LargeDiscoverContent extends StatelessWidget {
 class _BannerCarouselWidget extends StatelessWidget {
   const _BannerCarouselWidget({
     required this.bannerPaths,
-    required this.pageController,
     required this.currentBannerIndex,
     required this.bannerAspectRatio,
     required this.navIconColor,
-    required this.onPageChanged,
-    required this.onManualSlide,
     required this.borderRadius,
     required this.margin,
   });
 
   final List<String> bannerPaths;
-  final PageController pageController;
   final int currentBannerIndex;
   final double bannerAspectRatio;
   final Color navIconColor;
-  final ValueChanged<int> onPageChanged;
-  final VoidCallback onManualSlide;
   final double borderRadius;
   final EdgeInsets margin;
 
@@ -281,50 +241,48 @@ class _BannerCarouselWidget extends StatelessWidget {
     return Container(
       margin: margin,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOut,
-            child: AspectRatio(
-              aspectRatio: bannerAspectRatio,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(borderRadius),
-                child: PageView.builder(
-                  controller: pageController,
-                  itemCount: bannerPaths.length,
-                  onPageChanged: (index) {
-                    onPageChanged(index);
-                    onManualSlide();
-                  },
-                  itemBuilder: (context, index) {
-                    return Image.asset(
-                      bannerPaths[index],
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                    );
-                  },
+          Row(
+            children: [
+              for (var i = 0; i < bannerPaths.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(borderRadius),
+                    child: AspectRatio(
+                      aspectRatio: bannerAspectRatio,
+                      child: Image.asset(
+                        bannerPaths[i],
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              ],
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List<Widget>.generate(bannerPaths.length, (index) {
-              final isActive = index == currentBannerIndex;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: isActive ? 18 : 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? navIconColor
-                      : navIconColor.withValues(alpha: 0.28),
-                  borderRadius: BorderRadius.circular(999),
+            children: [
+              for (var i = 0; i < bannerPaths.length; i++)
+                Transform.rotate(
+                  angle: 0.7, // diagonal bar (bottom-left to top-right)
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 4,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: i == currentBannerIndex
+                          ? navIconColor
+                          : navIconColor.withValues(alpha: 0.28),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                 ),
-              );
-            }),
+            ],
           ),
         ],
       ),

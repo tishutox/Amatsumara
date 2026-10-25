@@ -79,33 +79,6 @@ class _ChatsPageState extends State<ChatsPage> {
       child: ListView(
         padding: ContentLayout.pagePadding,
         children: [
-          ContentLayout.widthBox(
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(
-                      LucideIcons.shieldKeyhole,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Chats are end-to-end encrypted. Messages are stored on the server only as encrypted payloads.',
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Refresh',
-                      onPressed: _refresh,
-                      icon: const Icon(LucideIcons.refreshCcw),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          ContentLayout.sectionGap,
           FutureBuilder<List<ChatPreview>>(
             future: _chatsFuture,
             builder: (context, snapshot) {

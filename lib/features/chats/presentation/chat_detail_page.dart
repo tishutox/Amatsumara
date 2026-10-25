@@ -41,6 +41,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isSending = false;
   bool _isRecording = false;
   bool _showAttachMenu = false;
+  bool _didInitialScroll = false;
   StreamSubscription<Amplitude>? _amplitudeSub;
   DateTime? _recordingStartedAt;
   final List<double> _amplitudes = [];
@@ -60,6 +61,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     super.initState();
     _prepareEncryption();
     _messageController.addListener(_handleTextChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToLatestOnce());
+  }
+
+  void _scrollToLatestOnce() {
+    if (_didInitialScroll) return;
+    _didInitialScroll = true;
+    Future<void>.delayed(const Duration(milliseconds: 500), () {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
   }
 
   void _handleTextChanged() {
@@ -1022,37 +1034,35 @@ class _GalleryBubble extends StatelessWidget {
   final List<ChatImageItem> images;
   final VoidCallback onTap;
 
-  static const _offset = 14.0;
-
   @override
   Widget build(BuildContext context) {
-    final anyLandscape = images.any((image) => image.isLandscape);
-    final tile = anyLandscape
-        ? const Size(200, 150)
-        : const Size(150, 200);
+    final visible = images.take(4).toList();
+    final anyLandscape = visible.any((image) => image.isLandscape);
+    final tile = anyLandscape ? const Size(52, 40) : const Size(40, 52);
 
     return GestureDetector(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(4),
-        child: images.length == 1
-            ? _galleryTile(images.first, tile)
-            : _stack(images, tile),
+        child: visible.length == 1
+            ? _galleryTile(visible.first, tile)
+            : _stack(visible, tile),
       ),
     );
   }
 
   Widget _stack(List<ChatImageItem> images, Size tile) {
+    final n = images.length;
     return SizedBox(
-      width: tile.width + (images.length - 1) * _offset + 16,
-      height: tile.height + (images.length - 1) * _offset + 16,
+      width: tile.width + 18,
+      height: tile.height + (n - 1) * 8 + 14,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          for (var i = images.length - 1; i >= 0; i--)
+          for (var i = n - 1; i >= 0; i--)
             Positioned(
-              left: i * _offset,
-              top: i * _offset,
+              left: 9 + _stackDx(i),
+              top: _stackDy(i),
               child: Transform.rotate(
                 angle: _stackAngle(i),
                 child: _galleryTile(images[i], tile),
@@ -1064,31 +1074,36 @@ class _GalleryBubble extends StatelessWidget {
   }
 
   Widget _galleryTile(ChatImageItem image, Size tile) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        width: tile.width,
-        height: tile.height,
-        child: Image.network(
-          image.url,
-          fit: BoxFit.cover,
-          filterQuality: FilterQuality.medium,
-          loadingBuilder: (context, child, progress) => progress == null
-              ? child
-              : const Center(child: CircularProgressIndicator()),
-          errorBuilder: (_, _, _) => const Center(
-            child: Icon(LucideIcons.imageOff),
-          ),
+    return SizedBox(
+      width: tile.width,
+      height: tile.height,
+      child: Image.network(
+        image.url,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+        loadingBuilder: (context, child, progress) => progress == null
+            ? child
+            : const Center(child: CircularProgressIndicator()),
+        errorBuilder: (_, _, _) => const Center(
+          child: Icon(LucideIcons.imageOff),
         ),
       ),
     );
   }
 }
 
+double _stackDx(int index) {
+  if (index == 0) return 0;
+  final direction = index.isOdd ? -1.0 : 1.0;
+  return direction * 6.0;
+}
+
+double _stackDy(int index) => index * 8.0;
+
 double _stackAngle(int index) {
   if (index == 0) return 0;
   final direction = index.isOdd ? -1.0 : 1.0;
-  return direction * 0.07; // ~4 degrees
+  return direction * 0.12; // ~7 degrees
 }
 
 class _ImageMessageBubble extends StatelessWidget {

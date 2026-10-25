@@ -24,7 +24,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   BioAlignment _alignment = BioAlignment.left;
   List<ProfileMention> _mentions = [];
   Color _backgroundColor = Colors.white;
-  Color _accentColor = const Color(0xFF5860C3);
+  Color _accentColor = const Color(0xFFFF1438);
   Uint8List? _avatarBytes;
   String? _avatarExtension;
   Uint8List? _bannerBytes;
@@ -595,7 +595,7 @@ class _ColorDialogState extends State<_ColorDialog> {
     Color(0xFFEAF4FF),
     Color(0xFF121212),
     Color(0xFF1E2340),
-    Color(0xFF5860C3),
+    Color(0xFFFF1438),
     Color(0xFFDB5DC9),
     Color(0xFFF90142),
     Color(0xFF00A884),
@@ -660,7 +660,7 @@ class _ColorDialogState extends State<_ColorDialog> {
               textCapitalization: TextCapitalization.characters,
               decoration: const InputDecoration(
                 labelText: 'Hex color',
-                hintText: '#5860C3',
+                hintText: '#FF1438',
               ),
               onChanged: (value) {
                 final parsed = profileColorFromHex(value, _selected);

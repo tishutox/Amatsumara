@@ -21,7 +21,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   static const double _maxContentWidth = 1160;
 
-  static const Color _navColor = Color(0xFF5860C3);
+  static const Color _navColor = Color(0xFFFF1438);
   static const Color _backgroundColor = Color(0xFF121212);
 
   int _currentIndex = 0;
