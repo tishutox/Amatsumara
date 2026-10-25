@@ -44,14 +44,17 @@ class ChatGalleryPage extends StatelessWidget {
                 ),
               ),
             ),
-            child: Image.network(
-              images[index].url,
-              fit: BoxFit.cover,
-              filterQuality: FilterQuality.medium,
-              errorBuilder: (_, _, _) => const ColoredBox(
-                color: Color(0xFF222222),
-                child: Center(
-                  child: Icon(LucideIcons.imageOff, color: Colors.white54),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                images[index].url,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, _, _) => const ColoredBox(
+                  color: Color(0xFF222222),
+                  child: Center(
+                    child: Icon(LucideIcons.imageOff, color: Colors.white54),
+                  ),
                 ),
               ),
             ),

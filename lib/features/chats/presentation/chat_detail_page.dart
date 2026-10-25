@@ -67,11 +67,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void _scrollToLatestOnce() {
     if (_didInitialScroll) return;
     _didInitialScroll = true;
-    Future<void>.delayed(const Duration(milliseconds: 500), () {
-      if (mounted && _scrollController.hasClients) {
-        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-      }
-    });
+    _attemptInitialScroll(6);
+  }
+
+  Future<void> _attemptInitialScroll(int remaining) async {
+    if (remaining <= 0 || !mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    if (_scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      return;
+    }
+    await _attemptInitialScroll(remaining - 1);
   }
 
   void _handleTextChanged() {
@@ -609,10 +617,12 @@ class _MediaInputBar extends StatelessWidget {
                       ? 'Waiting for encryption key...'
                       : 'Message',
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                   filled: false,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 14,
-                    vertical: 12,
+                    vertical: 10,
                   ),
                 ),
               ),
@@ -1038,7 +1048,7 @@ class _GalleryBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final visible = images.take(4).toList();
     final anyLandscape = visible.any((image) => image.isLandscape);
-    final tile = anyLandscape ? const Size(52, 40) : const Size(40, 52);
+    final tile = anyLandscape ? const Size(100, 80) : const Size(80, 100);
 
     return GestureDetector(
       onTap: onTap,
@@ -1074,18 +1084,21 @@ class _GalleryBubble extends StatelessWidget {
   }
 
   Widget _galleryTile(ChatImageItem image, Size tile) {
-    return SizedBox(
-      width: tile.width,
-      height: tile.height,
-      child: Image.network(
-        image.url,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.medium,
-        loadingBuilder: (context, child, progress) => progress == null
-            ? child
-            : const Center(child: CircularProgressIndicator()),
-        errorBuilder: (_, _, _) => const Center(
-          child: Icon(LucideIcons.imageOff),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: tile.width,
+        height: tile.height,
+        child: Image.network(
+          image.url,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.medium,
+          loadingBuilder: (context, child, progress) => progress == null
+              ? child
+              : const Center(child: CircularProgressIndicator()),
+          errorBuilder: (_, _, _) => const Center(
+            child: Icon(LucideIcons.imageOff),
+          ),
         ),
       ),
     );
