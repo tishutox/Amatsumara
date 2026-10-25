@@ -20,7 +20,7 @@ class _HomePageState extends State<HomePage> {
     'banners/Switzerland.png',
   ];
 
-  final PageController _pageController = PageController();
+  final PageController _pageController = PageController(viewportFraction: 0.92);
   Timer? _bannerTimer;
   int _currentBannerIndex = 0;
   List<double>? _bannerAspectRatios;
@@ -287,23 +287,25 @@ class _BannerCarouselWidget extends StatelessWidget {
             curve: Curves.easeOut,
             child: AspectRatio(
               aspectRatio: bannerAspectRatio,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(borderRadius),
-                child: PageView.builder(
-                  controller: pageController,
-                  itemCount: bannerPaths.length,
-                  onPageChanged: (index) {
-                    onPageChanged(index);
-                    onManualSlide();
-                  },
-                  itemBuilder: (context, index) {
-                    return Image.asset(
-                      bannerPaths[index],
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                    );
-                  },
-                ),
+              child: AnimatedBuilder(
+                animation: pageController,
+                builder: (context, _) {
+                  final page = pageController.hasClients
+                      ? (pageController.page ?? 0.0)
+                      : 0.0;
+                  return PageView(
+                    controller: pageController,
+                    padEnds: false,
+                    onPageChanged: (index) {
+                      onPageChanged(index);
+                      onManualSlide();
+                    },
+                    children: [
+                      for (var index = 0; index < bannerPaths.length; index++)
+                        _buildBanner(index, page),
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -312,24 +314,40 @@ class _BannerCarouselWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: List<Widget>.generate(bannerPaths.length, (index) {
               final isActive = index == currentBannerIndex;
-              return Transform.rotate(
-                angle: 0.7, // diagonal bar (bottom-left to top-right)
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: isActive ? 9 : 4,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? navIconColor
-                        : navIconColor.withValues(alpha: 0.28),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: isActive ? 22 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? navIconColor
+                      : navIconColor.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               );
             }),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBanner(int index, double page) {
+    final distance = (page - index).abs().clamp(0.0, 1.0);
+    final opacity = (1.0 - distance * 0.55).clamp(0.4, 1.0);
+    return Opacity(
+      opacity: opacity,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: Image.asset(
+            bannerPaths[index],
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        ),
       ),
     );
   }

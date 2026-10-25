@@ -643,6 +643,11 @@ class _MediaInputBar extends StatelessWidget {
                 onPressed: friendDeviceCount == 0 || isSending
                     ? null
                     : onToggleRecording,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 44,
+                  minHeight: 44,
+                ),
                 icon: Icon(LucideIcons.mic, color: primary),
               ),
               AnimatedRotation(
