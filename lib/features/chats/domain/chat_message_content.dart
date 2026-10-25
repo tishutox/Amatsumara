@@ -1,11 +1,29 @@
 import 'dart:convert';
 
-enum ChatMessageKind { text, image, audio }
+enum ChatMessageKind { text, image, audio, gallery }
+
+class ChatImageItem {
+  const ChatImageItem({required this.url, this.aspectRatio = 0});
+
+  final String url;
+
+  /// width / height. 0 means unknown. > 1 is landscape, < 1 is portrait.
+  final double aspectRatio;
+
+  bool get isLandscape => aspectRatio > 1.0;
+
+  Map<String, dynamic> toJson() => {'url': url, 'aspect': aspectRatio};
+
+  factory ChatImageItem.fromJson(Map<String, dynamic> json) => ChatImageItem(
+    url: json['url'] as String? ?? '',
+    aspectRatio: (json['aspect'] as num?)?.toDouble() ?? 0,
+  );
+}
 
 /// Plaintext that gets encrypted and stored inside a chat message.
 ///
-/// Text messages stay plain strings for backward compatibility. Image and
-/// audio messages are encoded as a small JSON envelope so the bubble can
+/// Text messages stay plain strings for backward compatibility. Image, audio
+/// and gallery messages are encoded as a small JSON envelope so the bubble can
 /// render them.
 class ChatMessageContent {
   const ChatMessageContent._({
@@ -14,6 +32,7 @@ class ChatMessageContent {
     this.url,
     this.name,
     this.duration,
+    this.images,
   });
 
   factory ChatMessageContent.text(String text) =>
@@ -31,11 +50,15 @@ class ChatMessageContent {
     duration: duration,
   );
 
+  factory ChatMessageContent.gallery(List<ChatImageItem> images) =>
+      ChatMessageContent._(kind: ChatMessageKind.gallery, images: images);
+
   final ChatMessageKind kind;
   final String? text;
   final String? url;
   final String? name;
   final double? duration;
+  final List<ChatImageItem>? images;
 
   String encode() => switch (kind) {
     ChatMessageKind.text => text ?? '',
@@ -48,6 +71,10 @@ class ChatMessageContent {
       'type': 'audio',
       'url': url,
       'duration': duration ?? 0,
+    }),
+    ChatMessageKind.gallery => jsonEncode({
+      'type': 'gallery',
+      'images': [for (final image in images ?? const <ChatImageItem>[]) image.toJson()],
     }),
   };
 
@@ -71,6 +98,23 @@ class ChatMessageContent {
               url: url,
               duration: duration is num ? duration.toDouble() : 0,
             );
+          }
+          if (type == 'gallery') {
+            final rawImages = decoded['images'];
+            if (rawImages is List) {
+              final images = rawImages
+                  .whereType<Map>()
+                  .map(
+                    (e) => ChatImageItem.fromJson(
+                      Map<String, dynamic>.from(e),
+                    ),
+                  )
+                  .where((image) => image.url.isNotEmpty)
+                  .toList();
+              if (images.isNotEmpty) {
+                return ChatMessageContent.gallery(images);
+              }
+            }
           }
         }
       } catch (_) {

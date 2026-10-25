@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
 import 'package:lumii_quest/features/chats/domain/chat_message_content.dart';
+import 'package:lumii_quest/features/chats/presentation/chat_gallery_page.dart';
 import 'package:lumii_quest/features/chats/presentation/recording_file_io.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
@@ -204,9 +206,19 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
     setState(() => _isSending = true);
     try {
+      final items = <ChatImageItem>[];
       for (final image in images) {
-        await _sendImage(image);
+        final bytes = await image.readAsBytes();
+        final aspectRatio = await _readAspectRatio(bytes);
+        final extension = _imageExtension(image.name);
+        final url = await _repository.uploadChatMedia(
+          bytes: bytes,
+          extension: extension,
+          contentType: _imageContentType(extension),
+        );
+        items.add(ChatImageItem(url: url, aspectRatio: aspectRatio));
       }
+      await _deliverContent(ChatMessageContent.gallery(items).encode());
       await _scrollToBottom();
     } catch (error) {
       _showError('Image could not be sent: $error');
@@ -217,17 +229,18 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
-  Future<void> _sendImage(XFile image) async {
-    final bytes = await image.readAsBytes();
-    final extension = _imageExtension(image.name);
-    final url = await _repository.uploadChatMedia(
-      bytes: bytes,
-      extension: extension,
-      contentType: _imageContentType(extension),
-    );
-    await _deliverContent(
-      ChatMessageContent.image(url: url, name: image.name).encode(),
-    );
+  Future<double> _readAspectRatio(Uint8List bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      final ratio = image.height == 0 ? 0.0 : image.width / image.height;
+      image.dispose();
+      codec.dispose();
+      return ratio;
+    } catch (_) {
+      return 0;
+    }
   }
 
   Future<void> _toggleRecording() async {
@@ -527,64 +540,68 @@ class _MediaInputBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
     final hasText = controller.text.trim().isNotEmpty;
     final canSend = friendDeviceCount > 0 && !isSending;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              minLines: 1,
-              maxLines: 4,
-              enabled: friendDeviceCount > 0 && !isSending,
-              decoration: InputDecoration(
-                hintText: friendDeviceCount == 0
-                    ? 'Waiting for encryption key...'
-                    : 'Message',
-                filled: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(50),
-                  borderSide: BorderSide.none,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(50),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                minLines: 1,
+                maxLines: 4,
+                enabled: friendDeviceCount > 0 && !isSending,
+                decoration: InputDecoration(
+                  hintText: friendDeviceCount == 0
+                      ? 'Waiting for encryption key...'
+                      : 'Message',
+                  border: InputBorder.none,
+                  filled: false,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          if (hasText)
-            _CircleIconButton(
-              tooltip: 'Send',
-              icon: isSending
-                  ? LucideIcons.loaderCircle
-                  : LucideIcons.sendHorizontal,
-              backgroundColor: primary,
-              iconColor: Colors.white,
-              onPressed: canSend ? onSend : null,
-            )
-          else ...[
-            IconButton(
-              tooltip: 'Voice message',
-              onPressed: friendDeviceCount == 0 || isSending
-                  ? null
-                  : onToggleRecording,
-              icon: Icon(LucideIcons.mic, color: primary),
-            ),
-            const SizedBox(width: 4),
-            _CircleIconButton(
-              tooltip: 'Send images',
-              icon: LucideIcons.circlePlus,
-              backgroundColor: primary,
-              iconColor: Colors.white,
-              onPressed: canSend ? onPickImages : null,
-            ),
+            if (hasText)
+              _CircleIconButton(
+                tooltip: 'Send',
+                icon: isSending
+                    ? LucideIcons.loaderCircle
+                    : LucideIcons.sendHorizontal,
+                backgroundColor: primary,
+                iconColor: Colors.white,
+                onPressed: canSend ? onSend : null,
+              )
+            else ...[
+              IconButton(
+                tooltip: 'Voice message',
+                onPressed: friendDeviceCount == 0 || isSending
+                    ? null
+                    : onToggleRecording,
+                icon: Icon(LucideIcons.mic, color: primary),
+              ),
+              _CircleIconButton(
+                tooltip: 'Send images',
+                icon: LucideIcons.circlePlus,
+                backgroundColor: primary,
+                iconColor: Colors.white,
+                size: 32,
+                onPressed: canSend ? onPickImages : null,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -605,29 +622,37 @@ class _RecordingInputBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final error = Theme.of(context).colorScheme.error;
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      child: Row(
-        children: [
-          _CircleIconButton(
-            tooltip: 'Cancel recording',
-            icon: LucideIcons.trash,
-            backgroundColor: error.withValues(alpha: 0.14),
-            iconColor: error,
-            onPressed: onCancel,
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: _RecordingWaveform(amplitudes: amplitudes)),
-          const SizedBox(width: 12),
-          _CircleIconButton(
-            tooltip: 'Send voice message',
-            icon: LucideIcons.sendHorizontal,
-            backgroundColor: primary,
-            iconColor: Colors.white,
-            onPressed: onFinish,
-          ),
-        ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(50),
+        ),
+        child: Row(
+          children: [
+            _CircleIconButton(
+              tooltip: 'Cancel recording',
+              icon: LucideIcons.trash,
+              backgroundColor: error.withValues(alpha: 0.16),
+              iconColor: error,
+              onPressed: onCancel,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: _RecordingWaveform(amplitudes: amplitudes)),
+            const SizedBox(width: 8),
+            _CircleIconButton(
+              tooltip: 'Send voice message',
+              icon: LucideIcons.sendHorizontal,
+              backgroundColor: primary,
+              iconColor: Colors.white,
+              onPressed: onFinish,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -689,6 +714,7 @@ class _CircleIconButton extends StatelessWidget {
     required this.backgroundColor,
     required this.iconColor,
     this.onPressed,
+    this.size = 40,
   });
 
   final String tooltip;
@@ -696,16 +722,23 @@ class _CircleIconButton extends StatelessWidget {
   final Color backgroundColor;
   final Color iconColor;
   final VoidCallback? onPressed;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: backgroundColor,
       shape: const CircleBorder(),
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        icon: Icon(icon, color: iconColor),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: IconButton(
+          tooltip: tooltip,
+          onPressed: onPressed,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          icon: Icon(icon, color: iconColor, size: size * 0.55),
+        ),
       ),
     );
   }
@@ -726,20 +759,16 @@ class _RecordingWaveform extends StatelessWidget {
         : amplitudes;
 
     return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: primary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(50),
-      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           for (final value in samples)
             Container(
               width: 3,
-              height: 6 + _normalizeAmplitude(value) * 36,
+              height: 6 + _normalizeAmplitude(value) * 32,
               decoration: BoxDecoration(
                 color: primary,
                 borderRadius: BorderRadius.circular(2),
@@ -836,8 +865,112 @@ class _MessageBubble extends StatelessWidget {
                     duration: content.duration ?? 0,
                     textColor: textColor,
                   );
+                case ChatMessageKind.gallery:
+                  return _GalleryBubble(
+                    images: content.images ?? const [],
+                    onTap: () => _openGallery(
+                      context,
+                      content.images ?? const [],
+                    ),
+                  );
               }
             },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openGallery(BuildContext context, List<ChatImageItem> images) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => ChatGalleryPage(images: images)),
+    );
+  }
+}
+
+class _GalleryBubble extends StatelessWidget {
+  const _GalleryBubble({required this.images, required this.onTap});
+
+  final List<ChatImageItem> images;
+  final VoidCallback onTap;
+
+  static const _offset = 14.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final anyLandscape = images.any((image) => image.isLandscape);
+    final tile = anyLandscape
+        ? const Size(200, 150)
+        : const Size(150, 200);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: switch (images.length) {
+          1 => _galleryTile(images.first, tile),
+          2 || 3 => _stack(images, tile),
+          _ => _grid(images, tile),
+        },
+      ),
+    );
+  }
+
+  Widget _stack(List<ChatImageItem> images, Size tile) {
+    return SizedBox(
+      width: tile.width + (images.length - 1) * _offset,
+      height: tile.height + (images.length - 1) * _offset,
+      child: Stack(
+        children: [
+          for (var i = images.length - 1; i >= 0; i--)
+            Positioned(
+              left: i * _offset,
+              top: i * _offset,
+              child: _galleryTile(images[i], tile),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _grid(List<ChatImageItem> images, Size tile) {
+    final rows = <List<ChatImageItem>>[];
+    for (var i = 0; i < images.length; i += 2) {
+      rows.add(images.sublist(i, (i + 2) > images.length ? images.length : i + 2));
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final row in rows)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final image in row)
+                Padding(
+                  padding: const EdgeInsets.all(1.5),
+                  child: _galleryTile(image, tile),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _galleryTile(ChatImageItem image, Size tile) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        width: tile.width,
+        height: tile.height,
+        child: Image.network(
+          image.url,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.medium,
+          loadingBuilder: (context, child, progress) => progress == null
+              ? child
+              : const Center(child: CircularProgressIndicator()),
+          errorBuilder: (_, _, _) => const Center(
+            child: Icon(LucideIcons.imageOff),
           ),
         ),
       ),
