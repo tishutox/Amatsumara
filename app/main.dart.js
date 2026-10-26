@@ -107877,7 +107877,7 @@ return A.o($async$Ca,r)},
 aMG(a){var s=this.a.fp("chat_messages"),r=s.ry,q=s.to
 q=new A.J7(s,s.rx,r+":"+q+":"+s.x1,!1,r,q,A.b(["id"],t.s),A.fw("supabase.supabase"),A.b([],t.H7))
 q.Q=new A.aRH("conversation_id",a,B.Vn)
-q.as=new A.aNM("sent_at",!1)
+q.as=new A.aNM("sent_at",!0)
 return new A.f2(new A.aeo(),q,t.qv.h("f2<bw.T,K<je>>"))},
 Co(a,b,c){return this.abW(a,b,c)},
 abW(a,b,c){var s=0,r=A.p(t.H),q=this,p,o,n
@@ -112168,8 +112168,8 @@ A.Wp.prototype={
 aLR(a,b,c){return A.i1(this.ale(a,B.iU,this.f,c,c,c),c)}}
 A.qP.prototype={
 PE(a){return A.asU(this.l0(a),A.r(this).c)},
-S7(a,b,c){var s=this,r=s.f.gf_().i(0,"order"),q=r==null?"":r+","
-return A.asU(s.PE(s.a92("order",q+b+".desc.nullslast")),A.r(s).c)},
+S7(a,b,c){var s=this,r=s.f.gf_().i(0,"order"),q=r==null?"":r+",",p=c?"asc":"desc"
+return A.asU(s.PE(s.a92("order",q+b+"."+p+".nullslast")),A.r(s).c)},
 aK7(a,b){return this.S7(0,b,!1)},
 aIe(a){return A.asU(this.PE(this.lc("limit",""+a)),A.r(this).c)},
 HO(){var s,r=t.N
@@ -115402,7 +115402,7 @@ case 6:i=f
 f=A.i1(i.l0(i.lc(e.a,"in.("+i.aky(e.b)+")")),i.$ti.c)
 break}n=null
 e=o.as
-if(e!=null)n=J.bd4(f,e.a,!1)
+if(e!=null)n=J.bd4(f,e.a,!0)
 q=3
 e=n
 s=6
@@ -115435,7 +115435,7 @@ if(r===B.Cu)s.scw(a.e)
 else if(r===B.Cv)s.scw(a.f)
 return B.b.dJ(this.w,new A.aAY(b,s))},
 az8(){this.as.toString
-B.b.eL(this.z,new A.aB0(this,-1))},
+B.b.eL(this.z,new A.aB0(this,1))},
 D3(){var s,r,q=this
 if(q.as!=null)q.az8()
 s=q.y

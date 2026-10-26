@@ -165,7 +165,7 @@ class ChatRepository {
           'id,conversation_id,sender_id,sender_device_id,encrypted_payload,sent_at',
         )
         .eq('conversation_id', conversationId)
-        .order('sent_at');
+        .order('sent_at', ascending: true);
     return (rows as List)
         .map((row) => ChatMessage.fromDatabase(Map<String, dynamic>.from(row)))
         .toList();
@@ -176,7 +176,7 @@ class ChatRepository {
         .from('chat_messages')
         .stream(primaryKey: ['id'])
         .eq('conversation_id', conversationId)
-        .order('sent_at')
+        .order('sent_at', ascending: true)
         .map(
           (rows) => rows
               .map(
