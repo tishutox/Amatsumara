@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   audioplayers_windows
   file_selector_windows
+  flutter_webrtc
   gal
   passkeys_windows
   record_windows

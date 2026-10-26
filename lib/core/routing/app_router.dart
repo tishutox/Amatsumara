@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 export 'package:lumii_quest/core/routing/profile_links.dart';
+import 'package:lumii_quest/features/calls/presentation/call_page.dart';
 import 'package:lumii_quest/features/chats/presentation/chat_detail_page.dart';
 import 'package:lumii_quest/features/me/presentation/settings_page.dart';
 import 'package:lumii_quest/features/notifications/presentation/notifications_page.dart';
@@ -26,6 +27,15 @@ final appRouter = GoRouter(
         conversationId: state.pathParameters['conversationId'] ?? '',
         friendId: state.uri.queryParameters['friendId'] ?? '',
         displayName: state.uri.queryParameters['name'] ?? 'Chat',
+      ),
+    ),
+    GoRoute(
+      path: '/call/:friendId',
+      builder: (_, state) => CallPage(
+        friendId: state.pathParameters['friendId'] ?? '',
+        displayName: state.uri.queryParameters['name'] ?? 'Call',
+        incoming: state.uri.queryParameters['incoming'] == 'true',
+        avatarUrl: state.uri.queryParameters['avatar'],
       ),
     ),
     GoRoute(

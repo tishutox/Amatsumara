@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:lumii_quest/core/responsive/breakpoints.dart';
+import 'package:lumii_quest/features/calls/data/call_signaling.dart';
 import 'package:lumii_quest/features/chats/presentation/chats_page.dart';
 import 'package:lumii_quest/features/communities/presentation/communities_page.dart';
 import 'package:lumii_quest/features/home/presentation/home_page.dart';
@@ -28,6 +29,7 @@ class _AppShellState extends State<AppShell> {
   int _profileReloadCount = 0;
   int? _hoveredCompactIndex;
   late final StreamSubscription<AuthState> _authSubscription;
+  RealtimeChannel? _incomingCallChannel;
 
   static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
   static const _icons = [
@@ -54,13 +56,51 @@ class _AppShellState extends State<AppShell> {
     ) {
       if (mounted) {
         setState(() {});
+        _syncIncomingCallListener();
       }
     });
+    _syncIncomingCallListener();
+  }
+
+  void _syncIncomingCallListener() {
+    _incomingCallChannel?.unsubscribe();
+    _incomingCallChannel = null;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      return;
+    }
+    _incomingCallChannel = CallSignaling().subscribeIncoming(
+      userId,
+      _onIncomingCall,
+    );
+  }
+
+  void _onIncomingCall(Map<String, dynamic> payload) {
+    if (payload['type'] != 'ring' || !mounted) {
+      return;
+    }
+    final from = payload['from'] as String?;
+    if (from == null || from.isEmpty) {
+      return;
+    }
+    final name = payload['name'] as String? ?? 'Lumii user';
+    final avatar = payload['avatarUrl'] as String?;
+    context.push(
+      Uri(
+        path: '/call/$from',
+        queryParameters: {
+          'name': name,
+          if (avatar != null && avatar.isNotEmpty) 'avatar': avatar,
+          'incoming': 'true',
+        },
+      ).toString(),
+    );
   }
 
   @override
   void dispose() {
     _authSubscription.cancel();
+    _incomingCallChannel?.unsubscribe();
     super.dispose();
   }
 

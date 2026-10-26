@@ -42,6 +42,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isRecording = false;
   bool _showAttachMenu = false;
   bool _didInitialScroll = false;
+  ChatReplyQuote? _replyTarget;
   StreamSubscription<Amplitude>? _amplitudeSub;
   DateTime? _recordingStartedAt;
   final List<double> _amplitudes = [];
@@ -83,7 +84,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   void _handleTextChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {
+      if (_messageController.text.trim().isNotEmpty) {
+        _showAttachMenu = false;
+      }
+    });
   }
 
   @override
@@ -174,25 +180,37 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
-  Future<void> _deliverContent(String content) async {
+  void _showInfo(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
+  Future<void> _deliverContent(ChatMessageContent content) async {
     final identity = _localIdentity;
-    if (content.isEmpty ||
-        identity == null ||
+    if (identity == null ||
         _recipientDevices.isEmpty ||
         _friendDeviceCount == 0) {
       return;
     }
+    final replyTo = _replyTarget;
+    final message = content.withReply(replyTo).encode();
     final encrypted = await _crypto.encryptForDevices(
       conversationId: widget.conversationId,
       senderDeviceId: identity.deviceId,
       recipients: _recipientDevices,
-      message: content,
+      message: message,
     );
     await _repository.sendMessage(
       conversationId: widget.conversationId,
       senderDeviceId: identity.deviceId,
       encryptedPayload: encrypted.value,
     );
+    if (replyTo != null && mounted) {
+      setState(() => _replyTarget = null);
+    }
   }
 
   Future<void> _sendText() async {
@@ -202,7 +220,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
     setState(() => _isSending = true);
     try {
-      await _deliverContent(text);
+      await _deliverContent(ChatMessageContent.text(text));
       _messageController.clear();
       await _scrollToBottom();
     } catch (error) {
@@ -239,7 +257,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         );
         items.add(ChatImageItem(url: url, aspectRatio: aspectRatio));
       }
-      await _deliverContent(ChatMessageContent.gallery(items).encode());
+      await _deliverContent(ChatMessageContent.gallery(items));
       await _scrollToBottom();
     } catch (error) {
       _showError('Image could not be sent: $error');
@@ -315,6 +333,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       setState(() {
         _isRecording = true;
         _recordingStartedAt = DateTime.now();
+        _showAttachMenu = false;
       });
     }
   }
@@ -361,7 +380,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         contentType: _audioContentType(extension),
       );
       await _deliverContent(
-        ChatMessageContent.audio(url: url, duration: duration).encode(),
+        ChatMessageContent.audio(url: url, duration: duration),
       );
       await _scrollToBottom();
     } catch (error) {
@@ -370,6 +389,184 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
       if (mounted) {
         setState(() => _isSending = false);
       }
+    }
+  }
+
+  void _cancelReply() {
+    setState(() => _replyTarget = null);
+  }
+
+  void _startCall() {
+    context.push(
+      Uri(
+        path: '/call/${widget.friendId}',
+        queryParameters: {'name': widget.displayName},
+      ).toString(),
+    );
+  }
+
+  Future<void> _forwardRaw(
+    String rawContent,
+    String conversationId,
+    String friendId,
+  ) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    final identity = _localIdentity;
+    if (user == null || identity == null) {
+      return;
+    }
+    final deviceKeys = await _repository.listActiveDeviceKeys([
+      user.id,
+      friendId,
+    ]);
+    final recipients = [
+      for (final device in deviceKeys)
+        ChatDeviceRecipient(
+          deviceId: device.deviceId,
+          publicKey: device.publicKey,
+        ),
+    ];
+    if (recipients.isEmpty) {
+      throw StateError('The recipient has no device keys yet.');
+    }
+    final encrypted = await _crypto.encryptForDevices(
+      conversationId: conversationId,
+      senderDeviceId: identity.deviceId,
+      recipients: recipients,
+      message: rawContent,
+    );
+    await _repository.sendMessage(
+      conversationId: conversationId,
+      senderDeviceId: identity.deviceId,
+      encryptedPayload: encrypted.value,
+    );
+  }
+
+  Future<void> _forwardMessage(String decryptedContent) async {
+    final chats = await _repository.listChats();
+    final targets = chats
+        .where((chat) => chat.conversationId != widget.conversationId)
+        .toList();
+    if (!mounted) return;
+    if (targets.isEmpty) {
+      _showError('No other chats available to forward to.');
+      return;
+    }
+    final target = await showModalBottomSheet<ChatPreview>(
+      context: context,
+      builder: (_) => _ForwardPicker(chats: targets),
+    );
+    if (target == null || !mounted) return;
+    setState(() => _isSending = true);
+    try {
+      await _forwardRaw(
+        decryptedContent,
+        target.conversationId,
+        target.friendId,
+      );
+      _showInfo('Message forwarded to ${target.displayName}.');
+    } catch (error) {
+      _showError('Message could not be forwarded: $error');
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  Future<void> _deleteMessageForAll(ChatMessage message) async {
+    setState(() => _isSending = true);
+    try {
+      await _repository.deleteMessageForAll(message.id);
+    } catch (error) {
+      _showError('Message could not be deleted: $error');
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  Future<void> _deleteMessageForMe(ChatMessage message) async {
+    setState(() => _isSending = true);
+    try {
+      await _repository.deleteMessageForMe(message.id);
+    } catch (error) {
+      _showError('Message could not be deleted: $error');
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  Future<String?> _showMenuAt(
+    BuildContext context,
+    Offset globalPosition,
+    List<PopupMenuEntry<String>> items,
+  ) {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    return showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 1, 1),
+        Offset.zero & overlay.size,
+      ),
+      items: items,
+    );
+  }
+
+  Future<void> _showMessageContextMenu(
+    BuildContext context,
+    Offset globalPosition,
+    ChatMessage message,
+    String decryptedContent,
+  ) async {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    final isMine = message.senderId == currentUserId;
+    final senderName = isMine ? 'You' : widget.displayName;
+    final preview = ChatMessageContent.decode(decryptedContent).preview;
+
+    final action = await _showMenuAt(context, globalPosition, [
+      const PopupMenuItem(
+        value: 'reply',
+        child: _MenuRow(icon: LucideIcons.reply, label: 'Reply'),
+      ),
+      const PopupMenuItem(
+        value: 'redirect',
+        child: _MenuRow(icon: LucideIcons.send, label: 'Redirect'),
+      ),
+      const PopupMenuItem(
+        value: 'delete',
+        child: _MenuRow(icon: LucideIcons.trash, label: 'Delete'),
+      ),
+    ]);
+
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case 'reply':
+        setState(() {
+          _replyTarget = ChatReplyQuote(
+            messageId: message.id,
+            senderName: senderName,
+            preview: preview,
+          );
+        });
+      case 'redirect':
+        await _forwardMessage(decryptedContent);
+      case 'delete':
+        if (!context.mounted) return;
+        final deleteAction = await _showMenuAt(context, globalPosition, [
+          const PopupMenuItem(
+            value: 'delete_all',
+            child: _MenuRow(icon: LucideIcons.trash, label: 'Delete for All'),
+          ),
+          const PopupMenuItem(
+            value: 'delete_me',
+            child: _MenuRow(icon: LucideIcons.userX, label: 'Delete for Me'),
+          ),
+        ]);
+        if (!mounted || deleteAction == null) return;
+        if (deleteAction == 'delete_all') {
+          await _deleteMessageForAll(message);
+        } else if (deleteAction == 'delete_me') {
+          await _deleteMessageForMe(message);
+        }
     }
   }
 
@@ -390,9 +587,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             surfaceTintColor: Colors.transparent,
             actions: [
               IconButton(
-                tooltip: 'Refresh',
-                onPressed: _refresh,
-                icon: const Icon(LucideIcons.refreshCcw),
+                tooltip: 'Video call',
+                onPressed: () {},
+                icon: const Icon(LucideIcons.video),
+              ),
+              IconButton(
+                tooltip: 'Voice call',
+                onPressed: _startCall,
+                icon: const Icon(LucideIcons.phone),
               ),
             ],
           ),
@@ -418,6 +620,9 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             showAttachMenu: _showAttachMenu,
             onToggleAttachMenu: _toggleAttachMenu,
             onPickSticker: _pickSticker,
+            replyTarget: _replyTarget,
+            onCancelReply: _cancelReply,
+            onMessageMenu: _showMessageContextMenu,
           ),
         );
       },
@@ -448,6 +653,9 @@ class _ChatDetailBody extends StatelessWidget {
     required this.showAttachMenu,
     required this.onToggleAttachMenu,
     required this.onPickSticker,
+    required this.replyTarget,
+    required this.onCancelReply,
+    required this.onMessageMenu,
   });
 
   final String? setupError;
@@ -471,6 +679,15 @@ class _ChatDetailBody extends StatelessWidget {
   final bool showAttachMenu;
   final VoidCallback onToggleAttachMenu;
   final Future<void> Function() onPickSticker;
+  final ChatReplyQuote? replyTarget;
+  final VoidCallback onCancelReply;
+  final void Function(
+    BuildContext context,
+    Offset globalPosition,
+    ChatMessage message,
+    String decryptedContent,
+  )
+  onMessageMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -517,6 +734,7 @@ class _ChatDetailBody extends StatelessWidget {
                       conversationId: conversationId,
                       crypto: crypto,
                       legacyFriendPublicKey: legacyFriendPublicKey,
+                      onMessageMenu: onMessageMenu,
                     );
                   },
                 );
@@ -529,6 +747,11 @@ class _ChatDetailBody extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (replyTarget != null)
+                _ReplyComposerBar(
+                  quote: replyTarget!,
+                  onCancel: onCancelReply,
+                ),
               if (showAttachMenu)
                 _AttachMenu(
                   onGallery: onPickImages,
@@ -730,18 +953,14 @@ class _AttachOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(height: 6),
-            Text(label),
-          ],
+    return Tooltip(
+      message: label,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Icon(icon, color: color),
         ),
       ),
     );
@@ -869,8 +1088,8 @@ class _CircleIconButton extends StatelessWidget {
       color: backgroundColor,
       shape: const CircleBorder(),
       child: SizedBox(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         child: IconButton(
           tooltip: tooltip,
           onPressed: onPressed,
@@ -929,12 +1148,20 @@ class _MessageBubble extends StatelessWidget {
     required this.conversationId,
     required this.crypto,
     required this.legacyFriendPublicKey,
+    required this.onMessageMenu,
   });
 
   final ChatMessage message;
   final String conversationId;
   final ChatCryptoService crypto;
   final String? legacyFriendPublicKey;
+  final void Function(
+    BuildContext context,
+    Offset globalPosition,
+    ChatMessage message,
+    String decryptedContent,
+  )
+  onMessageMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -947,6 +1174,7 @@ class _MessageBubble extends StatelessWidget {
     final textColor = isMine
         ? Theme.of(context).colorScheme.onPrimary
         : Theme.of(context).colorScheme.onSurface;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -959,8 +1187,9 @@ class _MessageBubble extends StatelessWidget {
             remotePublicKey: isMine ? legacyFriendPublicKey : null,
           ),
           builder: (context, snapshot) {
+            final Widget bubble;
             if (snapshot.hasError) {
-              return _bubble(
+              bubble = _bubble(
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -973,9 +1202,8 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 bubbleColor,
               );
-            }
-            if (!snapshot.hasData) {
-              return _bubble(
+            } else if (!snapshot.hasData) {
+              bubble = _bubble(
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
@@ -985,46 +1213,109 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 bubbleColor,
               );
+            } else {
+              final content = ChatMessageContent.decode(snapshot.data!);
+              bubble = _buildContent(
+                context,
+                content,
+                textColor,
+                bubbleColor,
+                onSurface,
+              );
             }
-            final content = ChatMessageContent.decode(snapshot.data!);
-            switch (content.kind) {
-              case ChatMessageKind.text:
-                return _bubble(
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    child: Text(
-                      content.text ?? '',
-                      style: TextStyle(color: textColor),
-                    ),
-                  ),
-                  bubbleColor,
-                );
-              case ChatMessageKind.image:
-                return _ImageMessageBubble(url: content.url!);
-              case ChatMessageKind.audio:
-                return _bubble(
-                  _AudioMessageBubble(
-                    url: content.url!,
-                    duration: content.duration ?? 0,
-                    textColor: textColor,
-                  ),
-                  bubbleColor,
-                );
-              case ChatMessageKind.gallery:
-                return _GalleryBubble(
-                  images: content.images ?? const [],
-                  onTap: () => _openGallery(
-                    context,
-                    content.images ?? const [],
-                  ),
-                );
+
+            if (!snapshot.hasData) {
+              return bubble;
             }
+            return GestureDetector(
+              onLongPressStart: (details) => onMessageMenu(
+                context,
+                details.globalPosition,
+                message,
+                snapshot.data!,
+              ),
+              onSecondaryTapUp: (details) => onMessageMenu(
+                context,
+                details.globalPosition,
+                message,
+                snapshot.data!,
+              ),
+              child: bubble,
+            );
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    ChatMessageContent content,
+    Color textColor,
+    Color bubbleColor,
+    Color onSurface,
+  ) {
+    switch (content.kind) {
+      case ChatMessageKind.text:
+        return _bubble(
+          _withReply(
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
+              child: Text(
+                content.text ?? '',
+                style: TextStyle(color: textColor),
+              ),
+            ),
+            content.replyTo,
+            textColor,
+          ),
+          bubbleColor,
+        );
+      case ChatMessageKind.image:
+        return _withReply(
+          _ImageMessageBubble(url: content.url!),
+          content.replyTo,
+          onSurface,
+        );
+      case ChatMessageKind.audio:
+        return _bubble(
+          _withReply(
+            _AudioMessageBubble(
+              url: content.url!,
+              duration: content.duration ?? 0,
+              textColor: textColor,
+            ),
+            content.replyTo,
+            textColor,
+          ),
+          bubbleColor,
+        );
+      case ChatMessageKind.gallery:
+        return _withReply(
+          _GalleryBubble(
+            images: content.images ?? const [],
+            onTap: () => _openGallery(context, content.images ?? const []),
+          ),
+          content.replyTo,
+          onSurface,
+        );
+    }
+  }
+
+  Widget _withReply(Widget child, ChatReplyQuote? replyTo, Color color) {
+    if (replyTo == null) {
+      return child;
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ReplyQuoteBar(quote: replyTo, color: color),
+        child,
+      ],
     );
   }
 
@@ -1291,6 +1582,172 @@ class _ChatInfoState extends StatelessWidget {
           Icon(icon, color: primary, size: 44),
           const SizedBox(height: 12),
           Text(message, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReplyQuoteBar extends StatelessWidget {
+  const _ReplyQuoteBar({required this.quote, required this.color});
+
+  final ChatReplyQuote quote;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: color, width: 3),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            quote.senderName,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            quote.preview,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReplyComposerBar extends StatelessWidget {
+  const _ReplyComposerBar({required this.quote, required this.onCancel});
+
+  final ChatReplyQuote quote;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Material(
+        color: surface,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      quote.senderName,
+                      style: TextStyle(
+                        color: primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      quote.preview,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cancel reply',
+                onPressed: onCancel,
+                icon: const Icon(LucideIcons.x),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18),
+        const SizedBox(width: 12),
+        Text(label),
+      ],
+    );
+  }
+}
+
+class _ForwardPicker extends StatelessWidget {
+  const _ForwardPicker({required this.chats});
+
+  final List<ChatPreview> chats;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Forward to',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: chats.length,
+              itemBuilder: (context, index) {
+                final chat = chats[index];
+                final fallbackLetter = chat.displayName.trim().isEmpty
+                    ? '?'
+                    : chat.displayName.trim().characters.first.toUpperCase();
+                return ListTile(
+                  leading: CircleAvatar(
+                    foregroundImage: chat.avatarUrl == null
+                        ? null
+                        : NetworkImage(chat.avatarUrl!),
+                    child: chat.avatarUrl == null ? Text(fallbackLetter) : null,
+                  ),
+                  title: Text(chat.displayName),
+                  subtitle: Text('@${chat.username}'),
+                  onTap: () => Navigator.of(context).pop(chat),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );

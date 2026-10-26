@@ -159,19 +159,24 @@ class ChatRepository {
   }
 
   Future<List<ChatMessage>> listMessages(String conversationId) async {
-    final rows = await _client
+    final userId = _client.auth.currentUser?.id;
+    var query = _client
         .from('chat_messages')
         .select(
           'id,conversation_id,sender_id,sender_device_id,encrypted_payload,sent_at',
         )
-        .eq('conversation_id', conversationId)
-        .order('sent_at', ascending: true);
+        .eq('conversation_id', conversationId);
+    if (userId != null) {
+      query = query.not('deleted_for', 'cs', [userId]);
+    }
+    final rows = await query.order('sent_at', ascending: true);
     return (rows as List)
         .map((row) => ChatMessage.fromDatabase(Map<String, dynamic>.from(row)))
         .toList();
   }
 
   Stream<List<ChatMessage>> watchMessages(String conversationId) {
+    final userId = _client.auth.currentUser?.id;
     return _client
         .from('chat_messages')
         .stream(primaryKey: ['id'])
@@ -179,12 +184,40 @@ class ChatRepository {
         .order('sent_at', ascending: true)
         .map(
           (rows) => rows
+              .where(
+                (row) =>
+                    userId == null ||
+                    row['deleted_for'] is! List ||
+                    !(row['deleted_for'] as List).contains(userId),
+              )
               .map(
                 (row) =>
                     ChatMessage.fromDatabase(Map<String, dynamic>.from(row)),
               )
               .toList(),
         );
+  }
+
+  Future<void> deleteMessageForAll(int messageId) async {
+    await _client.rpc(
+      'delete_chat_message_for_all',
+      params: {'p_message_id': messageId},
+    );
+  }
+
+  Future<void> deleteMessageForMe(int messageId) async {
+    await _client.rpc(
+      'delete_chat_message_for_me',
+      params: {'p_message_id': messageId},
+    );
+  }
+
+  Future<Map<String, dynamic>?> fetchFriendProfile(String friendId) async {
+    return _client
+        .from('profiles')
+        .select('username,display_name,avatar_url')
+        .eq('id', friendId)
+        .maybeSingle();
   }
 
   Future<void> sendMessage({
