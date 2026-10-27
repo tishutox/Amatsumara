@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
-import 'package:lumii_quest/features/account/data/account_repository.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
+import 'package:lumii_quest/widgets/settings_section.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -69,79 +69,6 @@ class _SettingsPageState extends State<SettingsPage> {
     await Supabase.instance.client.auth.signOut();
   }
 
-  String get _username {
-    final metadata = Supabase.instance.client.auth.currentUser?.userMetadata;
-    final raw = metadata?['username'];
-    final metaValue = raw is String && raw.isNotEmpty ? raw : null;
-    return _profile?.username ?? metaValue ?? '';
-  }
-
-  String get _displayName {
-    final metadata = Supabase.instance.client.auth.currentUser?.userMetadata;
-    final raw = metadata?['display_name'];
-    final metaValue = raw is String && raw.isNotEmpty ? raw : null;
-    return _profile?.displayName ?? metaValue ?? '';
-  }
-
-  void _showSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
-  }
-
-  Future<void> _changePassword() async {
-    final email = Supabase.instance.client.auth.currentUser?.email;
-    if (email == null || email.isEmpty) {
-      _showSnackBar('No email address is linked to this account.');
-      return;
-    }
-    try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(email);
-      _showSnackBar('A password reset link has been sent to your email.');
-    } catch (error) {
-      _showSnackBar('Password reset could not be sent: $error');
-    }
-  }
-
-  Future<void> _deleteAccount() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete account?'),
-        content: const Text(
-          'This permanently deletes your account, profile, friendships, notifications and chats. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
-            ),
-            onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(LucideIcons.trash),
-            label: const Text('Delete account'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    try {
-      await AccountRepository().deleteCurrentAccount();
-      _showSnackBar('Your account has been deleted.');
-    } catch (error) {
-      _showSnackBar('Account could not be deleted: $error');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
@@ -161,52 +88,22 @@ class _SettingsPageState extends State<SettingsPage> {
             ContentLayout.widthBox(child: _buildHeader(user)),
             ContentLayout.sectionGap,
           ],
-          if (user != null) ...[
-            ContentLayout.widthBox(
-              child: _SettingsSection(
-                title: 'Kontoinformationen',
-                children: [
-                  _SettingsValueTile(
-                    icon: LucideIcons.atSign,
-                    label: 'Username',
-                    value: _username,
-                  ),
-                  _SettingsValueTile(
-                    icon: LucideIcons.userRound,
-                    label: 'Displayname',
-                    value: _displayName,
-                  ),
-                  _SettingsValueTile(
-                    icon: LucideIcons.mail,
-                    label: 'Email',
-                    value: user.email ?? '',
-                  ),
-                ],
-              ),
-            ),
-            ContentLayout.sectionGap,
-            ContentLayout.widthBox(
-              child: _SettingsSection(
-                title: 'Danger Zone',
-                children: [
-                  _SettingsValueTile(
-                    icon: LucideIcons.keyRound,
-                    label: 'Change Password',
-                    onTap: _changePassword,
-                  ),
-                  _SettingsValueTile(
-                    icon: LucideIcons.trash2,
-                    label: 'Delete Account',
-                    labelColor: Theme.of(context).colorScheme.error,
-                    onTap: _deleteAccount,
-                  ),
-                ],
-              ),
-            ),
-            ContentLayout.sectionGap,
-          ],
           ContentLayout.widthBox(
-            child: const _SettingsSection(
+            child: SettingsSection(
+              title: 'Account',
+              dividerIndent: 16,
+              children: [
+                _SettingsLinkTile(
+                  label: 'Account',
+                  onTap: () => context.push('/account'),
+                ),
+                const _SettingsLinkTile(label: 'Data Privacy & Security'),
+              ],
+            ),
+          ),
+          ContentLayout.sectionGap,
+          ContentLayout.widthBox(
+            child: const SettingsSection(
               title: 'App Settings',
               children: [
                 _SettingsTile(
@@ -224,7 +121,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           ContentLayout.sectionGap,
           ContentLayout.widthBox(
-            child: const _SettingsSection(
+            child: const SettingsSection(
               title: 'Support',
               children: [
                 _SettingsTile(
@@ -419,45 +316,6 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(6, 0, 6, 8),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: primary,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0)
-                  const Divider(height: 1, indent: 56, endIndent: 16),
-                children[i],
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile({required this.icon, required this.label});
 
@@ -475,49 +333,18 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
-class _SettingsValueTile extends StatelessWidget {
-  const _SettingsValueTile({
-    required this.icon,
-    required this.label,
-    this.value,
-    this.labelColor,
-    this.onTap,
-  });
+class _SettingsLinkTile extends StatelessWidget {
+  const _SettingsLinkTile({required this.label, this.onTap});
 
-  final IconData icon;
   final String label;
-  final String? value;
-  final Color? labelColor;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final muted = Theme.of(
-      context,
-    ).colorScheme.onSurface.withValues(alpha: 0.62);
-    final accent = labelColor ?? primary;
     return ListTile(
-      leading: Icon(icon, color: accent),
-      title: Text(label, style: TextStyle(color: labelColor)),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (value != null && value!.isNotEmpty) ...[
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 180),
-              child: Text(
-                value!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: muted, fontSize: 14),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Icon(LucideIcons.chevronRight, color: accent, size: 20),
-        ],
-      ),
+      title: Text(label),
+      trailing: Icon(LucideIcons.chevronRight, color: primary),
       onTap: onTap,
     );
   }

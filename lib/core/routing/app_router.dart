@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 export 'package:lumii_quest/core/routing/profile_links.dart';
+import 'package:lumii_quest/features/account/presentation/account_page.dart';
 import 'package:lumii_quest/features/calls/presentation/call_page.dart';
 import 'package:lumii_quest/features/chats/presentation/chat_detail_page.dart';
 import 'package:lumii_quest/features/me/presentation/settings_page.dart';
@@ -19,6 +20,7 @@ final appRouter = GoRouter(
           PublicProfilePage(username: state.pathParameters['username'] ?? ''),
     ),
     GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+    GoRoute(path: '/account', builder: (_, _) => const AccountPage()),
     GoRoute(path: '/edit-profile', builder: (_, _) => const EditProfilePage()),
     GoRoute(path: '/friends', builder: (_, _) => const FriendsPage()),
     GoRoute(
