@@ -753,9 +753,21 @@ class _ChatDetailBody extends StatelessWidget {
                   onCancel: onCancelReply,
                 ),
               if (showAttachMenu)
-                _AttachMenu(
-                  onGallery: onPickImages,
-                  onSticker: onPickSticker,
+                SizedBox(
+                  height: 0,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        right: 12,
+                        bottom: 0,
+                        child: _AttachMenu(
+                          onGallery: onPickImages,
+                          onSticker: onPickSticker,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               _buildInput(context),
             ],
@@ -902,36 +914,30 @@ class _AttachMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final surface = Theme.of(context).colorScheme.surfaceContainerHighest;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: Material(
-          color: surface,
-          elevation: 4,
-          shadowColor: Colors.black54,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _AttachOption(
-                  icon: LucideIcons.image,
-                  label: 'Gallery',
-                  color: primary,
-                  onTap: onGallery,
-                ),
-                const SizedBox(width: 4),
-                _AttachOption(
-                  icon: LucideIcons.sticker,
-                  label: 'Sticker',
-                  color: primary,
-                  onTap: onSticker,
-                ),
-              ],
+    return Material(
+      color: surface,
+      elevation: 4,
+      shadowColor: Colors.black54,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _AttachOption(
+              icon: LucideIcons.image,
+              label: 'Gallery',
+              color: primary,
+              onTap: onGallery,
             ),
-          ),
+            const SizedBox(width: 4),
+            _AttachOption(
+              icon: LucideIcons.sticker,
+              label: 'Sticker',
+              color: primary,
+              onTap: onSticker,
+            ),
+          ],
         ),
       ),
     );
@@ -1088,14 +1094,14 @@ class _CircleIconButton extends StatelessWidget {
       color: backgroundColor,
       shape: const CircleBorder(),
       child: SizedBox(
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         child: IconButton(
           tooltip: tooltip,
           onPressed: onPressed,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
-          icon: Icon(icon, color: iconColor, size: 22),
+          icon: Icon(icon, color: iconColor, size: 24),
         ),
       ),
     );
@@ -1117,22 +1123,26 @@ class _RecordingWaveform extends StatelessWidget {
         : amplitudes;
 
     return Container(
-      height: 44,
+      height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      alignment: Alignment.center,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          for (final value in samples)
-            Container(
-              width: 3,
-              height: 6 + _normalizeAmplitude(value) * 32,
-              decoration: BoxDecoration(
-                color: primary,
-                borderRadius: BorderRadius.circular(2),
+      alignment: Alignment.centerLeft,
+      child: ClipRect(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < samples.length; i++) ...[
+              if (i > 0) const SizedBox(width: 3),
+              Container(
+                width: 3,
+                height: 6 + _normalizeAmplitude(samples[i]) * 36,
+                decoration: BoxDecoration(
+                  color: primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1344,7 +1354,7 @@ class _GalleryBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final visible = images.take(4).toList();
     final anyLandscape = visible.any((image) => image.isLandscape);
-    final tile = anyLandscape ? const Size(100, 80) : const Size(80, 100);
+    final tile = anyLandscape ? const Size(120, 96) : const Size(96, 120);
 
     return GestureDetector(
       onTap: onTap,
@@ -1425,7 +1435,7 @@ class _ImageMessageBubble extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
+        constraints: const BoxConstraints(maxWidth: 420),
         child: Image.network(
           url,
           fit: BoxFit.cover,
@@ -1435,14 +1445,14 @@ class _ImageMessageBubble extends StatelessWidget {
               return child;
             }
             return const SizedBox(
-              width: 220,
-              height: 160,
+              width: 260,
+              height: 190,
               child: Center(child: CircularProgressIndicator()),
             );
           },
           errorBuilder: (_, _, _) => const SizedBox(
-            width: 220,
-            height: 120,
+            width: 260,
+            height: 160,
             child: Center(child: Icon(LucideIcons.imageOff)),
           ),
         ),

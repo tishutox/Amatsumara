@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// WebRTC call signaling over Supabase Realtime broadcast channels.
@@ -41,16 +43,26 @@ class CallSignaling {
     String? callerAvatarUrl,
   }) async {
     final channel = _client.channel(personalChannel(peerUserId));
+    final payload = <String, dynamic>{
+      'type': 'ring',
+      'from': _selfId,
+      'name': callerName,
+      'avatarUrl': callerAvatarUrl,
+    };
+
+    // Subscribe over WebSocket first so the ring is delivered reliably to the
+    // peer's live subscription, falling back to REST only if that fails.
+    final ready = Completer<void>();
+    channel.subscribe((status, [error]) {
+      if (!ready.isCompleted) {
+        ready.complete();
+      }
+    });
     try {
-      await channel.sendBroadcastMessage(
-        event: 'call',
-        payload: {
-          'type': 'ring',
-          'from': _selfId,
-          'name': callerName,
-          'avatarUrl': callerAvatarUrl,
-        },
-      );
+      await ready.future.timeout(const Duration(seconds: 6));
+      await channel.sendBroadcastMessage(event: 'call', payload: payload);
+    } catch (_) {
+      await channel.sendBroadcastMessage(event: 'call', payload: payload);
     } finally {
       await channel.unsubscribe();
     }

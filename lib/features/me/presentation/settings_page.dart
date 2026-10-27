@@ -91,13 +91,16 @@ class _SettingsPageState extends State<SettingsPage> {
           ContentLayout.widthBox(
             child: SettingsSection(
               title: 'Account',
-              dividerIndent: 16,
               children: [
                 _SettingsLinkTile(
                   label: 'Account',
+                  icon: LucideIcons.circleUserRound,
                   onTap: () => context.push('/account'),
                 ),
-                const _SettingsLinkTile(label: 'Data Privacy & Security'),
+                const _SettingsLinkTile(
+                  label: 'Data Privacy & Security',
+                  icon: LucideIcons.fingerprintPattern,
+                ),
               ],
             ),
           ),
@@ -334,15 +337,17 @@ class _SettingsTile extends StatelessWidget {
 }
 
 class _SettingsLinkTile extends StatelessWidget {
-  const _SettingsLinkTile({required this.label, this.onTap});
+  const _SettingsLinkTile({required this.label, this.icon, this.onTap});
 
   final String label;
+  final IconData? icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     return ListTile(
+      leading: icon == null ? null : Icon(icon, color: primary),
       title: Text(label),
       trailing: Icon(LucideIcons.chevronRight, color: primary),
       onTap: onTap,

@@ -121,16 +121,16 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Future<void> _changePassword() async {
-    final email = _email;
-    if (email.isEmpty) {
-      _showSnackBar('No email address is linked to this account.');
-      return;
-    }
+    final newPassword = await showDialog<String>(
+      context: context,
+      builder: (_) => const _ChangePasswordDialog(),
+    );
+    if (newPassword == null || !mounted) return;
     try {
-      await Supabase.instance.client.auth.resetPasswordForEmail(email);
-      _showSnackBar('A password reset link has been sent to your email.');
+      await _repository.updatePassword(newPassword);
+      _showSnackBar('Password updated.');
     } catch (error) {
-      _showSnackBar('Password reset could not be sent: $error');
+      _showSnackBar('Password could not be updated: $error');
     }
   }
 
@@ -404,4 +404,96 @@ String? _emailValidator(String? value) {
     return 'Enter a valid email address.';
   }
   return null;
+}
+
+String? _passwordValidator(String? value) {
+  final password = value?.trim() ?? '';
+  if (password.length < 8) {
+    return 'Password needs at least 8 characters.';
+  }
+  return null;
+}
+
+class _ChangePasswordDialog extends StatefulWidget {
+  const _ChangePasswordDialog();
+
+  @override
+  State<_ChangePasswordDialog> createState() => _ChangePasswordDialogState();
+}
+
+class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscure = true;
+
+  @override
+  void dispose() {
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    Navigator.of(context).pop(_newPasswordController.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Change password'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _newPasswordController,
+              obscureText: _obscure,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'New password',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  tooltip: _obscure ? 'Show password' : 'Hide password',
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                  icon: Icon(
+                    _obscure ? LucideIcons.eye : LucideIcons.eyeOff,
+                  ),
+                ),
+              ),
+              validator: _passwordValidator,
+              onFieldSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _confirmPasswordController,
+              obscureText: _obscure,
+              decoration: const InputDecoration(
+                labelText: 'Confirm password',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value != _newPasswordController.text) {
+                  return 'Passwords do not match.';
+                }
+                return _passwordValidator(value);
+              },
+              onFieldSubmitted: (_) => _submit(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
+      ],
+    );
+  }
 }

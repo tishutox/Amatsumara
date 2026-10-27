@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lumii_quest/features/calls/data/call_signaling.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
@@ -49,6 +51,10 @@ class _CallPageState extends State<CallPage> {
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
   CallSession? _session;
   bool _muted = false;
+  bool _headphonesOff = false;
+  bool _speakerOn = false;
+  StreamSubscription<dynamic>? _overlaySub;
+  bool _overlayShown = false;
 
   String get _selfId => Supabase.instance.client.auth.currentUser?.id ?? '';
   String get _sessionId =>
@@ -238,6 +244,7 @@ class _CallPageState extends State<CallPage> {
             _statusMessage = 'Connected';
           });
         }
+        unawaited(_showCallOverlay());
       } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
@@ -315,6 +322,8 @@ class _CallPageState extends State<CallPage> {
   }
 
   Future<void> _cleanup() async {
+    await _hideCallOverlay();
+
     final session = _session;
     _session = null;
     session?.dispose();
@@ -344,6 +353,70 @@ class _CallPageState extends State<CallPage> {
     track.enabled = !_muted;
   }
 
+  Future<void> _toggleHeadphones() async {
+    setState(() => _headphonesOff = !_headphonesOff);
+    _remoteRenderer.muted = _headphonesOff;
+  }
+
+  Future<void> _toggleSpeaker() async {
+    setState(() => _speakerOn = !_speakerOn);
+    try {
+      await Helper.setSpeakerphoneOn(_speakerOn);
+    } catch (_) {
+      // Speakerphone is Android-only; other platforms are a no-op.
+    }
+  }
+
+  Future<void> _showCallOverlay() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    if (_overlayShown) {
+      return;
+    }
+    try {
+      var granted = await FlutterOverlayWindow.isPermissionGranted();
+      if (!granted) {
+        final requested = await FlutterOverlayWindow.requestPermission();
+        if (requested != true) {
+          return;
+        }
+        granted = true;
+      }
+      await FlutterOverlayWindow.showOverlay(
+        height: 140,
+        width: 140,
+        alignment: OverlayAlignment.centerRight,
+        visibility: NotificationVisibility.visibilityPublic,
+        overlayTitle: 'Lumii Call',
+        overlayContent: widget.displayName,
+        enableDrag: true,
+        positionGravity: PositionGravity.auto,
+      );
+      _overlayShown = true;
+      _overlaySub = FlutterOverlayWindow.overlayListener.listen((message) {
+        // Tapping the bubble dismisses it and returns focus to the call.
+        unawaited(_hideCallOverlay());
+      });
+    } catch (_) {
+      // The overlay is best-effort; ignore failures on unsupported devices.
+    }
+  }
+
+  Future<void> _hideCallOverlay() async {
+    _overlaySub?.cancel();
+    _overlaySub = null;
+    if (!_overlayShown) {
+      return;
+    }
+    _overlayShown = false;
+    try {
+      await FlutterOverlayWindow.closeOverlay();
+    } catch (_) {
+      // Ignore.
+    }
+  }
+
   @override
   void dispose() {
     unawaited(_cleanup());
@@ -354,7 +427,7 @@ class _CallPageState extends State<CallPage> {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final background = const Color(0xFF121212);
+    final background = const Color(0xFF161518);
 
     return Scaffold(
       backgroundColor: background,
@@ -450,8 +523,11 @@ class _CallPageState extends State<CallPage> {
       default:
         return _CallControlsBar(
           muted: _muted,
-          connected: _phase == _CallPhase.connected,
+          headphonesOff: _headphonesOff,
+          speakerOn: _speakerOn,
           onToggleMute: _toggleMute,
+          onToggleHeadphones: _toggleHeadphones,
+          onToggleSpeaker: _toggleSpeaker,
           onHangup: _hangup,
         );
     }
@@ -461,14 +537,20 @@ class _CallPageState extends State<CallPage> {
 class _CallControlsBar extends StatelessWidget {
   const _CallControlsBar({
     required this.muted,
-    required this.connected,
+    required this.headphonesOff,
+    required this.speakerOn,
     required this.onToggleMute,
+    required this.onToggleHeadphones,
+    required this.onToggleSpeaker,
     required this.onHangup,
   });
 
   final bool muted;
-  final bool connected;
+  final bool headphonesOff;
+  final bool speakerOn;
   final VoidCallback onToggleMute;
+  final VoidCallback onToggleHeadphones;
+  final VoidCallback onToggleSpeaker;
   final VoidCallback onHangup;
 
   @override
@@ -486,40 +568,36 @@ class _CallControlsBar extends StatelessWidget {
           _CircleControl(
             tooltip: 'Video',
             icon: LucideIcons.video,
-            backgroundColor: Colors.transparent,
-            iconColor: Colors.white,
             size: 46,
           ),
           _CircleControl(
             tooltip: muted ? 'Unmute' : 'Mute',
             icon: LucideIcons.mic,
-            backgroundColor: muted
-                ? const Color(0xFFE53935)
-                : Colors.transparent,
-            iconColor: muted ? Colors.white : Colors.white,
+            active: muted,
             size: 46,
             onTap: onToggleMute,
           ),
           _CircleControl(
-            tooltip: 'Speaker',
-            icon: LucideIcons.headphones,
-            backgroundColor: Colors.transparent,
-            iconColor: Colors.white,
+            tooltip: headphonesOff ? 'Headphones on' : 'Headphones off',
+            icon: headphonesOff
+                ? LucideIcons.headphoneOff
+                : LucideIcons.headphones,
+            active: headphonesOff,
             size: 46,
+            onTap: onToggleHeadphones,
           ),
           _CircleControl(
-            tooltip: 'Volume',
-            icon: LucideIcons.volume2,
-            backgroundColor: Colors.transparent,
-            iconColor: Colors.white,
+            tooltip: speakerOn ? 'Speaker off' : 'Speaker on',
+            icon: speakerOn ? LucideIcons.volumeOff : LucideIcons.volume2,
+            active: speakerOn,
             size: 46,
+            onTap: onToggleSpeaker,
           ),
           _CircleControl(
             tooltip: 'End call',
             icon: LucideIcons.phone,
             rotateIcon: true,
             backgroundColor: const Color(0xFFE53935),
-            iconColor: Colors.white,
             size: 46,
             onTap: onHangup,
           ),
@@ -533,8 +611,8 @@ class _CircleControl extends StatelessWidget {
   const _CircleControl({
     required this.tooltip,
     required this.icon,
-    required this.backgroundColor,
-    this.iconColor = Colors.white,
+    this.active = false,
+    this.backgroundColor = Colors.transparent,
     this.size = 60,
     this.rotateIcon = false,
     this.onTap,
@@ -542,20 +620,23 @@ class _CircleControl extends StatelessWidget {
 
   final String tooltip;
   final IconData icon;
+  final bool active;
   final Color backgroundColor;
-  final Color iconColor;
   final double size;
   final bool rotateIcon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final activeColor = Theme.of(context).colorScheme.error;
+    final effectiveIconColor = active ? activeColor : Colors.white;
+
     final iconWidget = rotateIcon
         ? Transform.rotate(
             angle: math.pi * 3 / 4,
-            child: Icon(icon, color: iconColor, size: size * 0.42),
+            child: Icon(icon, color: effectiveIconColor, size: size * 0.42),
           )
-        : Icon(icon, color: iconColor, size: size * 0.42);
+        : Icon(icon, color: effectiveIconColor, size: size * 0.42);
 
     return Material(
       color: backgroundColor,
@@ -565,7 +646,17 @@ class _CircleControl extends StatelessWidget {
         onTap: onTap,
         child: Tooltip(
           message: tooltip,
-          child: SizedBox(width: size, height: size, child: Center(child: iconWidget)),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: active
+                  ? Border.all(color: activeColor, width: 2)
+                  : null,
+            ),
+            child: Center(child: iconWidget),
+          ),
         ),
       ),
     );

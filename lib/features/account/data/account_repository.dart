@@ -45,4 +45,8 @@ class AccountRepository {
   Future<void> updateEmail(String email) async {
     await _client.auth.updateUser(UserAttributes(email: email));
   }
+
+  Future<void> updatePassword(String newPassword) async {
+    await _client.auth.updateUser(UserAttributes(password: newPassword));
+  }
 }

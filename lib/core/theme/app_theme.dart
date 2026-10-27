@@ -5,8 +5,8 @@ class AppTheme {
 
   static ThemeData dark() {
     return system(
-      primary: const Color(0xFFFF1438),
-      background: const Color(0xFF121212),
+      primary: const Color(0xFFE26E83),
+      background: const Color(0xFF161518),
       brightness: Brightness.dark,
     );
   }
@@ -21,7 +21,7 @@ class AppTheme {
     final onSurface = isDark
         ? const Color(0xFFF3F1F6)
         : const Color(0xFF231F20);
-    final outline = isDark ? const Color(0xFF3C3A42) : const Color(0xFFF0E8E8);
+    final outline = isDark ? const Color(0xFFA29FA3) : const Color(0xFFF0E8E8);
     final colorScheme =
         ColorScheme.fromSeed(
           seedColor: primary,

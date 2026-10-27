@@ -22,8 +22,8 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   static const double _maxContentWidth = 1160;
 
-  static const Color _navColor = Color(0xFFFF1438);
-  static const Color _backgroundColor = Color(0xFF121212);
+  static const Color _navColor = Color(0xFFE26E83);
+  static const Color _backgroundColor = Color(0xFF161518);
 
   int _currentIndex = 0;
   int _profileReloadCount = 0;
@@ -139,7 +139,7 @@ class _AppShellState extends State<AppShell> {
   }) {
     final fallback = Icon(
       _icons[index],
-      color: selected ? navColor : navColor.withValues(alpha: 0.72),
+      color: selected ? navColor : const Color(0xFFA29FA3),
     );
     final avatarUrl = _avatarUrl;
     if (index != 3 || avatarUrl == null) {
