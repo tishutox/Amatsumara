@@ -115,7 +115,7 @@ class _CallPageState extends State<CallPage> {
   }
 
   void _onMessage(Map<String, dynamic> payload) {
-    final type = payload['type'] as String?;
+    final type = payload['kind'] as String?;
     switch (type) {
       case 'ready':
         unawaited(_onReady());
@@ -138,7 +138,7 @@ class _CallPageState extends State<CallPage> {
       final offer = await _pc!.createOffer();
       await _pc!.setLocalDescription(offer);
       await _session!.send({
-        'type': 'offer',
+        'kind': 'offer',
         'from': _selfId,
         'sdp': {'type': offer.type, 'sdp': offer.sdp},
       });
@@ -163,7 +163,7 @@ class _CallPageState extends State<CallPage> {
       final answer = await _pc!.createAnswer();
       await _pc!.setLocalDescription(answer);
       await _session!.send({
-        'type': 'answer',
+        'kind': 'answer',
         'from': _selfId,
         'sdp': {'type': answer.type, 'sdp': answer.sdp},
       });
@@ -220,7 +220,7 @@ class _CallPageState extends State<CallPage> {
         return;
       }
       _session?.send({
-        'type': 'ice',
+        'kind': 'ice',
         'from': _selfId,
         'candidate': {
           'candidate': candidate.candidate,
@@ -272,13 +272,13 @@ class _CallPageState extends State<CallPage> {
       _statusMessage = 'Connecting...';
     });
     _session = _signaling.joinSession(_sessionId, _onMessage);
-    await _session!.send({'type': 'ready', 'from': _selfId});
+    await _session!.send({'kind': 'ready', 'from': _selfId});
   }
 
   Future<void> _decline() async {
     final session = _signaling.joinSession(_sessionId, _onMessage);
     try {
-      await session.send({'type': 'decline', 'from': _selfId});
+      await session.send({'kind': 'decline', 'from': _selfId});
     } finally {
       session.dispose();
     }
@@ -287,7 +287,7 @@ class _CallPageState extends State<CallPage> {
 
   Future<void> _hangup() async {
     try {
-      await _session?.send({'type': 'hangup', 'from': _selfId});
+      await _session?.send({'kind': 'hangup', 'from': _selfId});
     } catch (_) {
       // Ignore signaling errors on hangup.
     }

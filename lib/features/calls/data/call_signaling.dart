@@ -44,7 +44,7 @@ class CallSignaling {
   }) async {
     final channel = _client.channel(personalChannel(peerUserId));
     final payload = <String, dynamic>{
-      'type': 'ring',
+      'kind': 'ring',
       'from': _selfId,
       'name': callerName,
       'avatarUrl': callerAvatarUrl,

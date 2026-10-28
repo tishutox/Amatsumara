@@ -20,7 +20,6 @@ class MePage extends StatefulWidget {
 }
 
 class _MePageState extends State<MePage> {
-  final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -30,6 +29,8 @@ class _MePageState extends State<MePage> {
   final _birthdayController = TextEditingController();
 
   _AuthMode _mode = _AuthMode.signUp;
+  bool _showLanding = true;
+  int _currentStep = 0;
   DateTime? _birthday;
   String? _country;
   bool _isSubmitting = false;
@@ -137,7 +138,9 @@ class _MePageState extends State<MePage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) {
+    final error = _currentStepError();
+    if (error != null) {
+      _showMessage(error);
       return;
     }
 
@@ -345,185 +348,378 @@ class _MePageState extends State<MePage> {
       );
     }
 
-    final isSignUp = _mode == _AuthMode.signUp;
+    if (_showLanding) {
+      return _buildLanding(context);
+    }
 
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: ContentLayout.pagePadding,
-        children: [
-          ContentLayout.widthBox(
-            child: _AuthHeader(
-              mode: _mode,
-              onChanged: (mode) {
-                setState(() => _mode = mode);
-                _formKey.currentState?.reset();
-              },
-            ),
+    return _buildWizard(context);
+  }
+
+  Widget _buildLanding(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Icon(LucideIcons.heart, size: 64, color: primary),
+              const SizedBox(height: 16),
+              Text(
+                'Lumii Quest',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Connect with friends and communities.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 40),
+              FilledButton.icon(
+                onPressed: () => _start(_AuthMode.signUp),
+                icon: const Icon(LucideIcons.userPlus),
+                label: const Text('Sign Up'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => _start(_AuthMode.signIn),
+                icon: const Icon(LucideIcons.logIn),
+                label: const Text('Sign In'),
+              ),
+            ],
           ),
-          ContentLayout.sectionGap,
-          if (isSignUp) ...[
-            ContentLayout.widthBox(
-              child: _AuthSection(
-                title: 'Profile',
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _ProfileImagePicker(
-                        imageBytes: _registrationAvatarBytes,
-                        onPressed: _pickRegistrationAvatar,
-                      ),
-                      const SizedBox(height: 18),
-                      _ResponsiveFields(
-                        children: [
-                          _AuthTextField(
-                            controller: _firstNameController,
-                            label: 'First name',
-                            icon: LucideIcons.idCard,
-                            maxLength: 30,
-                            validator: (value) =>
-                                _requiredMax(value, 'First name', 30),
-                          ),
-                          _AuthTextField(
-                            controller: _lastNameController,
-                            label: 'Last name',
-                            icon: LucideIcons.idCard,
-                            maxLength: 30,
-                            validator: (value) =>
-                                _requiredMax(value, 'Last name', 30),
-                          ),
-                        ],
-                      ),
-                      ContentLayout.sectionGap,
-                      _AuthTextField(
-                        controller: _displayNameController,
-                        label: 'Display name',
-                        icon: LucideIcons.userRound,
-                        maxLength: 20,
-                        validator: (value) =>
-                            _requiredMax(value, 'Display name', 20),
-                      ),
-                    ],
+        ),
+      ),
+    );
+  }
+
+  void _start(_AuthMode mode) {
+    setState(() {
+      _mode = mode;
+      _showLanding = false;
+      _currentStep = 0;
+    });
+  }
+
+  void _goBack() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+    } else {
+      setState(() {
+        _showLanding = true;
+        _currentStep = 0;
+      });
+    }
+  }
+
+  String? _currentStepError() {
+    final isSignUp = _mode == _AuthMode.signUp;
+    if (!isSignUp) {
+      return _emailValidator(_emailController.text) ??
+          _passwordValidator(_passwordController.text);
+    }
+    switch (_currentStep) {
+      case 0:
+        return _requiredMax(_firstNameController.text, 'First name', 30) ??
+            _requiredMax(_lastNameController.text, 'Last name', 30) ??
+            _requiredMax(_displayNameController.text, 'Display name', 20);
+      case 1:
+        return _usernameValidator(_usernameController.text) ??
+            _emailValidator(_emailController.text) ??
+            _passwordValidator(_passwordController.text);
+      case 2:
+        return _required(_birthdayController.text, 'Birthday') ??
+            (_country == null ? 'Country is required.' : null);
+    }
+    return null;
+  }
+
+  void _next() {
+    final error = _currentStepError();
+    if (error != null) {
+      _showMessage(error);
+      return;
+    }
+    setState(() => _currentStep++);
+  }
+
+  void _showMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Widget _buildWizard(BuildContext context) {
+    final isSignUp = _mode == _AuthMode.signUp;
+    final steps = _steps(isSignUp);
+    final isLastStep = _currentStep == steps.length - 1;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Back',
+                onPressed: _goBack,
+                icon: const Icon(LucideIcons.chevronLeft),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  isSignUp ? 'Create account' : 'Welcome back',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
+              Text(
+                '${_currentStep + 1}/${steps.length}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              final offset = Tween<Offset>(
+                begin: const Offset(0.06, 0),
+                end: Offset.zero,
+              ).animate(animation);
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(position: offset, child: child),
+              );
+            },
+            child: KeyedSubtree(
+              key: ValueKey<int>(_currentStep),
+              child: ListView(
+                padding: ContentLayout.pagePadding,
+                children: [steps[_currentStep]],
+              ),
             ),
-            ContentLayout.sectionGap,
-          ],
-          ContentLayout.widthBox(
-            child: _AuthSection(
-              title: 'Account',
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (isSignUp) ...[
-                      _AuthTextField(
-                        controller: _usernameController,
-                        label: 'Username',
-                        icon: LucideIcons.userRound,
-                        maxLength: 20,
-                        validator: _usernameValidator,
-                      ),
-                      ContentLayout.sectionGap,
-                    ],
-                    _ResponsiveFields(
-                      children: [
-                        _AuthTextField(
-                          controller: _emailController,
-                          label: 'Email',
-                          icon: LucideIcons.mail,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: _emailValidator,
-                        ),
-                        _AuthTextField(
-                          controller: _passwordController,
-                          label: 'Password',
-                          icon: LucideIcons.eyeClosed,
-                          obscureText: true,
-                          validator: _passwordValidator,
-                        ),
-                      ],
+          ),
+        ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+            child: Row(
+              children: [
+                if (_currentStep > 0) ...[
+                  OutlinedButton(
+                    onPressed: _goBack,
+                    child: const Text('Back'),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _isSubmitting
+                        ? null
+                        : isLastStep
+                        ? _submit
+                        : _next,
+                    icon: Icon(
+                      _isSubmitting
+                          ? LucideIcons.hourglass
+                          : isLastStep
+                          ? (isSignUp
+                                ? LucideIcons.userPlus
+                                : LucideIcons.logIn)
+                          : LucideIcons.chevronRight,
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (isSignUp) ...[
-            ContentLayout.sectionGap,
-            ContentLayout.widthBox(
-              child: _AuthSection(
-                title: 'Details',
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _ResponsiveFields(
-                        children: [
-                          _AuthTextField(
-                            controller: _birthdayController,
-                            label: 'Birthday',
-                            icon: LucideIcons.cakeSlice,
-                            readOnly: true,
-                            onTap: _pickBirthday,
-                            validator: (value) => _required(value, 'Birthday'),
-                          ),
-                          DropdownButtonFormField<String>(
-                            initialValue: _country,
-                            icon: const Icon(LucideIcons.chevronDown),
-                            decoration: _fieldDecoration(
-                              label: 'Country',
-                              icon: LucideIcons.earth,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            items: _countries
-                                .map(
-                                  (country) => DropdownMenuItem<String>(
-                                    value: country,
-                                    child: Text(country),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() => _country = value);
-                            },
-                            validator: (value) =>
-                                value == null ? 'Country is required.' : null,
-                          ),
-                        ],
-                      ),
-                    ],
+                    label: Text(
+                      _isSubmitting
+                          ? 'Please wait...'
+                          : isLastStep
+                          ? (isSignUp ? 'Create account' : 'Sign in')
+                          : 'Next',
+                    ),
                   ),
                 ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 22),
-          ContentLayout.widthBox(
-            child: FilledButton.icon(
-              onPressed: _isSubmitting ? null : _submit,
-              icon: Icon(
-                _isSubmitting
-                    ? LucideIcons.hourglass
-                    : isSignUp
-                    ? LucideIcons.userPlus
-                    : LucideIcons.logIn,
-              ),
-              label: Text(
-                _isSubmitting
-                    ? 'Please wait...'
-                    : isSignUp
-                    ? 'Create account'
-                    : 'Sign in',
-              ),
+              ],
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _steps(bool isSignUp) {
+    if (!isSignUp) {
+      return [_accountStep(isSignUp: false)];
+    }
+    return [
+      _profileStep(),
+      _accountStep(isSignUp: true),
+      _detailsStep(),
+    ];
+  }
+
+  Widget _profileStep() {
+    return ContentLayout.widthBox(
+      child: _AuthSection(
+        title: 'Profile',
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ProfileImagePicker(
+                imageBytes: _registrationAvatarBytes,
+                onPressed: _pickRegistrationAvatar,
+              ),
+              const SizedBox(height: 18),
+              _ResponsiveFields(
+                children: [
+                  _AuthTextField(
+                    controller: _firstNameController,
+                    label: 'First name',
+                    icon: LucideIcons.idCard,
+                    maxLength: 30,
+                    validator: (value) =>
+                        _requiredMax(value, 'First name', 30),
+                  ),
+                  _AuthTextField(
+                    controller: _lastNameController,
+                    label: 'Last name',
+                    icon: LucideIcons.idCard,
+                    maxLength: 30,
+                    validator: (value) =>
+                        _requiredMax(value, 'Last name', 30),
+                  ),
+                ],
+              ),
+              ContentLayout.sectionGap,
+              _AuthTextField(
+                controller: _displayNameController,
+                label: 'Display name',
+                icon: LucideIcons.userRound,
+                maxLength: 20,
+                validator: (value) =>
+                    _requiredMax(value, 'Display name', 20),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _accountStep({required bool isSignUp}) {
+    return ContentLayout.widthBox(
+      child: _AuthSection(
+        title: 'Account',
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (isSignUp) ...[
+                _AuthTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  icon: LucideIcons.userRound,
+                  maxLength: 20,
+                  validator: _usernameValidator,
+                ),
+                ContentLayout.sectionGap,
+              ],
+              _ResponsiveFields(
+                children: [
+                  _AuthTextField(
+                    controller: _emailController,
+                    label: 'Email',
+                    icon: LucideIcons.mail,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: _emailValidator,
+                  ),
+                  _AuthTextField(
+                    controller: _passwordController,
+                    label: 'Password',
+                    icon: LucideIcons.eyeClosed,
+                    obscureText: true,
+                    validator: _passwordValidator,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailsStep() {
+    return ContentLayout.widthBox(
+      child: _AuthSection(
+        title: 'Details',
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ResponsiveFields(
+                children: [
+                  _AuthTextField(
+                    controller: _birthdayController,
+                    label: 'Birthday',
+                    icon: LucideIcons.cakeSlice,
+                    readOnly: true,
+                    onTap: _pickBirthday,
+                    validator: (value) => _required(value, 'Birthday'),
+                  ),
+                  DropdownButtonFormField<String>(
+                    initialValue: _country,
+                    icon: const Icon(LucideIcons.chevronDown),
+                    decoration: _fieldDecoration(
+                      label: 'Country',
+                      icon: LucideIcons.earth,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    items: _countries
+                        .map(
+                          (country) => DropdownMenuItem<String>(
+                            value: country,
+                            child: Text(country),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() => _country = value);
+                    },
+                    validator: (value) =>
+                        value == null ? 'Country is required.' : null,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -719,63 +915,6 @@ class _AuthSection extends StatelessWidget {
           child: child,
         ),
       ],
-    );
-  }
-}
-
-class _AuthHeader extends StatelessWidget {
-  const _AuthHeader({required this.mode, required this.onChanged});
-
-  final _AuthMode mode;
-  final ValueChanged<_AuthMode> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final title = Text(
-          mode == _AuthMode.signUp ? 'Create account' : 'Welcome back',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: primary,
-            fontWeight: FontWeight.w800,
-          ),
-        );
-        final modeSwitch = SegmentedButton<_AuthMode>(
-          segments: const [
-            ButtonSegment<_AuthMode>(
-              value: _AuthMode.signUp,
-              label: Text('Sign Up'),
-              icon: Icon(LucideIcons.userPlus),
-            ),
-            ButtonSegment<_AuthMode>(
-              value: _AuthMode.signIn,
-              label: Text('Sign In'),
-              icon: Icon(LucideIcons.logIn),
-            ),
-          ],
-          selected: {mode},
-          onSelectionChanged: (value) => onChanged(value.first),
-        );
-
-        if (constraints.maxWidth < 560) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              title,
-              const SizedBox(height: 12),
-              Align(alignment: Alignment.centerLeft, child: modeSwitch),
-            ],
-          );
-        }
-
-        return Row(
-          children: [
-            Expanded(child: title),
-            modeSwitch,
-          ],
-        );
-      },
     );
   }
 }

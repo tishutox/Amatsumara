@@ -41,6 +41,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isSending = false;
   bool _isRecording = false;
   bool _showAttachMenu = false;
+  final _attachMenuLink = LayerLink();
+  final _attachMenuController = OverlayPortalController();
   bool _didInitialScroll = false;
   ChatReplyQuote? _replyTarget;
   StreamSubscription<Amplitude>? _amplitudeSub;
@@ -83,13 +85,23 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     await _attemptInitialScroll(remaining - 1);
   }
 
+  void _setAttachMenu(bool show) {
+    if (_showAttachMenu == show) return;
+    setState(() => _showAttachMenu = show);
+    if (show) {
+      _attachMenuController.show();
+    } else {
+      _attachMenuController.hide();
+    }
+  }
+
   void _handleTextChanged() {
     if (!mounted) return;
-    setState(() {
-      if (_messageController.text.trim().isNotEmpty) {
-        _showAttachMenu = false;
-      }
-    });
+    if (_messageController.text.trim().isNotEmpty && _showAttachMenu) {
+      _setAttachMenu(false);
+    } else {
+      setState(() {});
+    }
   }
 
   @override
@@ -282,12 +294,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
-  void _toggleAttachMenu() {
-    setState(() => _showAttachMenu = !_showAttachMenu);
-  }
+  void _toggleAttachMenu() => _setAttachMenu(!_showAttachMenu);
 
   Future<void> _pickSticker() async {
-    setState(() => _showAttachMenu = false);
+    _setAttachMenu(false);
     _showError('Stickers are coming soon.');
   }
 
@@ -335,6 +345,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _recordingStartedAt = DateTime.now();
         _showAttachMenu = false;
       });
+      _attachMenuController.hide();
     }
   }
 
@@ -598,31 +609,49 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
               ),
             ],
           ),
-          body: _ChatDetailBody(
-            setupError: _setupError,
-            repository: _repository,
-            conversationId: widget.conversationId,
-            crypto: _crypto,
-            legacyFriendPublicKey: _legacyFriendPublicKey,
-            scrollController: _scrollController,
-            messageController: _messageController,
-            friendDeviceCount: _friendDeviceCount,
-            isSending: _isSending,
-            isRecording: _isRecording,
-            supportsMedia: _supportsMedia,
-            amplitudes: _amplitudes,
-            onRefresh: _refresh,
-            onSend: _sendText,
-            onPickImages: _sendImages,
-            onToggleRecording: _toggleRecording,
-            onCancelRecording: _cancelRecording,
-            onFinishRecording: _finishRecording,
-            showAttachMenu: _showAttachMenu,
-            onToggleAttachMenu: _toggleAttachMenu,
-            onPickSticker: _pickSticker,
-            replyTarget: _replyTarget,
-            onCancelReply: _cancelReply,
-            onMessageMenu: _showMessageContextMenu,
+          body: Stack(
+            children: [
+              _ChatDetailBody(
+                setupError: _setupError,
+                repository: _repository,
+                conversationId: widget.conversationId,
+                crypto: _crypto,
+                legacyFriendPublicKey: _legacyFriendPublicKey,
+                scrollController: _scrollController,
+                messageController: _messageController,
+                friendDeviceCount: _friendDeviceCount,
+                isSending: _isSending,
+                isRecording: _isRecording,
+                supportsMedia: _supportsMedia,
+                amplitudes: _amplitudes,
+                onRefresh: _refresh,
+                onSend: _sendText,
+                onPickImages: _sendImages,
+                onToggleRecording: _toggleRecording,
+                onCancelRecording: _cancelRecording,
+                onFinishRecording: _finishRecording,
+                showAttachMenu: _showAttachMenu,
+                onToggleAttachMenu: _toggleAttachMenu,
+                onPickSticker: _pickSticker,
+                replyTarget: _replyTarget,
+                onCancelReply: _cancelReply,
+                onMessageMenu: _showMessageContextMenu,
+                attachMenuLink: _attachMenuLink,
+              ),
+              OverlayPortal(
+                controller: _attachMenuController,
+                overlayChildBuilder: (context) => CompositedTransformFollower(
+                  link: _attachMenuLink,
+                  targetAnchor: Alignment.topRight,
+                  followerAnchor: Alignment.bottomRight,
+                  offset: const Offset(0, -8),
+                  child: _AttachMenu(
+                    onGallery: _sendImages,
+                    onSticker: _pickSticker,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -656,6 +685,7 @@ class _ChatDetailBody extends StatelessWidget {
     required this.replyTarget,
     required this.onCancelReply,
     required this.onMessageMenu,
+    required this.attachMenuLink,
   });
 
   final String? setupError;
@@ -688,6 +718,7 @@ class _ChatDetailBody extends StatelessWidget {
     String decryptedContent,
   )
   onMessageMenu;
+  final LayerLink attachMenuLink;
 
   @override
   Widget build(BuildContext context) {
@@ -752,23 +783,6 @@ class _ChatDetailBody extends StatelessWidget {
                   quote: replyTarget!,
                   onCancel: onCancelReply,
                 ),
-              if (showAttachMenu)
-                SizedBox(
-                  height: 0,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned(
-                        right: 12,
-                        bottom: 0,
-                        child: _AttachMenu(
-                          onGallery: onPickImages,
-                          onSticker: onPickSticker,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               _buildInput(context),
             ],
           ),
@@ -794,6 +808,7 @@ class _ChatDetailBody extends StatelessWidget {
         onSend: onSend,
         onToggleAttachMenu: onToggleAttachMenu,
         onToggleRecording: onToggleRecording,
+        attachMenuLink: attachMenuLink,
       );
     }
     return _LegacyInputBar(
@@ -814,6 +829,7 @@ class _MediaInputBar extends StatelessWidget {
     required this.onSend,
     required this.onToggleAttachMenu,
     required this.onToggleRecording,
+    required this.attachMenuLink,
   });
 
   final TextEditingController controller;
@@ -823,6 +839,7 @@ class _MediaInputBar extends StatelessWidget {
   final Future<void> Function() onSend;
   final VoidCallback onToggleAttachMenu;
   final Future<void> Function() onToggleRecording;
+  final LayerLink attachMenuLink;
 
   @override
   Widget build(BuildContext context) {
@@ -885,15 +902,18 @@ class _MediaInputBar extends StatelessWidget {
                 ),
                 icon: Icon(LucideIcons.mic, color: primary),
               ),
-              AnimatedRotation(
-                turns: showAttachMenu ? 0.125 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: _CircleIconButton(
-                  tooltip: 'Attach',
-                  icon: LucideIcons.circlePlus,
-                  backgroundColor: primary,
-                  iconColor: Colors.white,
-                  onPressed: canSend ? onToggleAttachMenu : null,
+              CompositedTransformTarget(
+                link: attachMenuLink,
+                child: AnimatedRotation(
+                  turns: showAttachMenu ? 0.125 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: _CircleIconButton(
+                    tooltip: 'Attach',
+                    icon: LucideIcons.circlePlus,
+                    backgroundColor: primary,
+                    iconColor: Colors.white,
+                    onPressed: canSend ? onToggleAttachMenu : null,
+                  ),
                 ),
               ),
             ],

@@ -5,6 +5,7 @@ import 'package:lumii_quest/features/calls/data/call_signaling.dart';
 import 'package:lumii_quest/features/chats/presentation/chats_page.dart';
 import 'package:lumii_quest/features/communities/presentation/communities_page.dart';
 import 'package:lumii_quest/features/home/presentation/home_page.dart';
+import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:lumii_quest/features/me/presentation/own_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +31,7 @@ class _AppShellState extends State<AppShell> {
   int? _hoveredCompactIndex;
   late final StreamSubscription<AuthState> _authSubscription;
   RealtimeChannel? _incomingCallChannel;
+  _IncomingCall? _incomingCall;
 
   static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
   static const _icons = [
@@ -76,7 +78,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _onIncomingCall(Map<String, dynamic> payload) {
-    if (payload['type'] != 'ring' || !mounted) {
+    if (payload['kind'] != 'ring' || !mounted) {
       return;
     }
     final from = payload['from'] as String?;
@@ -85,16 +87,41 @@ class _AppShellState extends State<AppShell> {
     }
     final name = payload['name'] as String? ?? 'Lumii user';
     final avatar = payload['avatarUrl'] as String?;
+    setState(() {
+      _incomingCall = _IncomingCall(
+        callerId: from,
+        name: name,
+        avatarUrl: avatar,
+      );
+    });
+  }
+
+  void _acceptIncomingCall() {
+    final call = _incomingCall;
+    if (call == null) return;
+    setState(() => _incomingCall = null);
     context.push(
       Uri(
-        path: '/call/$from',
+        path: '/call/${call.callerId}',
         queryParameters: {
-          'name': name,
-          if (avatar != null && avatar.isNotEmpty) 'avatar': avatar,
+          'name': call.name,
+          if (call.avatarUrl != null && call.avatarUrl!.isNotEmpty)
+            'avatar': call.avatarUrl!,
           'incoming': 'true',
         },
       ).toString(),
     );
+  }
+
+  void _declineIncomingCall() {
+    final call = _incomingCall;
+    if (call == null) return;
+    setState(() => _incomingCall = null);
+    final selfId = Supabase.instance.client.auth.currentUser?.id ?? '';
+    final sessionId = CallSignaling.sessionChannel(selfId, call.callerId);
+    final session = CallSignaling().joinSession(sessionId, (_) {});
+    unawaited(session.send({'kind': 'decline', 'from': selfId}));
+    session.dispose();
   }
 
   @override
@@ -174,6 +201,13 @@ class _AppShellState extends State<AppShell> {
     const backgroundColor = _backgroundColor;
     final pages = _buildPages(navColor);
 
+    if (Supabase.instance.client.auth.currentUser == null) {
+      return const Scaffold(
+        backgroundColor: backgroundColor,
+        body: MePage(),
+      );
+    }
+
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
@@ -217,9 +251,19 @@ class _AppShellState extends State<AppShell> {
         ],
       ),
 
-      body: Row(
+      body: Column(
         children: [
-          if (!isCompact)
+          if (_incomingCall != null)
+            _IncomingCallBanner(
+              name: _incomingCall!.name,
+              avatarUrl: _incomingCall!.avatarUrl,
+              onAccept: _acceptIncomingCall,
+              onDecline: _declineIncomingCall,
+            ),
+          Expanded(
+            child: Row(
+              children: [
+                if (!isCompact)
             Theme(
               data: Theme.of(context).copyWith(
                 hoverColor: navColor.withValues(alpha: 0.10),
@@ -269,6 +313,9 @@ class _AppShellState extends State<AppShell> {
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
             ),
           ),
         ],
@@ -349,6 +396,114 @@ class _AppShellState extends State<AppShell> {
               ),
             )
           : null,
+    );
+  }
+}
+
+class _IncomingCall {
+  const _IncomingCall({
+    required this.callerId,
+    required this.name,
+    this.avatarUrl,
+  });
+
+  final String callerId;
+  final String name;
+  final String? avatarUrl;
+}
+
+class _IncomingCallBanner extends StatelessWidget {
+  const _IncomingCallBanner({
+    required this.name,
+    required this.onAccept,
+    required this.onDecline,
+    this.avatarUrl,
+  });
+
+  final String name;
+  final String? avatarUrl;
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surface;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
+    return Material(
+      color: surface,
+      elevation: 3,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: primary.withValues(alpha: 0.14),
+                backgroundImage: (avatarUrl == null || avatarUrl!.isEmpty)
+                    ? null
+                    : NetworkImage(avatarUrl!),
+                child: (avatarUrl == null || avatarUrl!.isEmpty)
+                    ? Text(
+                        name.trim().isEmpty
+                            ? '?'
+                            : name.trim().characters.first.toUpperCase(),
+                        style: TextStyle(color: primary),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Incoming call',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Decline',
+                onPressed: onDecline,
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(LucideIcons.phone),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'Accept',
+                onPressed: onAccept,
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFF43A047),
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(LucideIcons.phone),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
