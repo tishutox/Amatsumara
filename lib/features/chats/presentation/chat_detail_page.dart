@@ -41,8 +41,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isSending = false;
   bool _isRecording = false;
   bool _showAttachMenu = false;
-  final _attachMenuLink = LayerLink();
-  final _attachMenuController = OverlayPortalController();
+  final _inputAreaKey = GlobalKey();
+  double _inputAreaHeight = 0;
   bool _didInitialScroll = false;
   ChatReplyQuote? _replyTarget;
   StreamSubscription<Amplitude>? _amplitudeSub;
@@ -88,10 +88,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   void _setAttachMenu(bool show) {
     if (_showAttachMenu == show) return;
     setState(() => _showAttachMenu = show);
-    if (show) {
-      _attachMenuController.show();
-    } else {
-      _attachMenuController.hide();
+  }
+
+  void _measureInputArea() {
+    final box = _inputAreaKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    if (box.size.height != _inputAreaHeight) {
+      setState(() => _inputAreaHeight = box.size.height);
     }
   }
 
@@ -345,7 +348,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         _recordingStartedAt = DateTime.now();
         _showAttachMenu = false;
       });
-      _attachMenuController.hide();
     }
   }
 
@@ -583,6 +585,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureInputArea());
     return Builder(
       builder: (context) {
         final themedPrimary = Theme.of(context).colorScheme.primary;
@@ -610,6 +613,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             ],
           ),
           body: Stack(
+            clipBehavior: Clip.none,
             children: [
               _ChatDetailBody(
                 setupError: _setupError,
@@ -636,21 +640,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 replyTarget: _replyTarget,
                 onCancelReply: _cancelReply,
                 onMessageMenu: _showMessageContextMenu,
-                attachMenuLink: _attachMenuLink,
+                inputAreaKey: _inputAreaKey,
               ),
-              OverlayPortal(
-                controller: _attachMenuController,
-                overlayChildBuilder: (context) => CompositedTransformFollower(
-                  link: _attachMenuLink,
-                  targetAnchor: Alignment.topRight,
-                  followerAnchor: Alignment.bottomRight,
-                  offset: const Offset(0, -8),
+              if (_showAttachMenu)
+                Positioned(
+                  right: 16,
+                  bottom: _inputAreaHeight + 8,
                   child: _AttachMenu(
                     onGallery: _sendImages,
                     onSticker: _pickSticker,
                   ),
                 ),
-              ),
             ],
           ),
         );
@@ -685,7 +685,7 @@ class _ChatDetailBody extends StatelessWidget {
     required this.replyTarget,
     required this.onCancelReply,
     required this.onMessageMenu,
-    required this.attachMenuLink,
+    required this.inputAreaKey,
   });
 
   final String? setupError;
@@ -718,7 +718,7 @@ class _ChatDetailBody extends StatelessWidget {
     String decryptedContent,
   )
   onMessageMenu;
-  final LayerLink attachMenuLink;
+  final GlobalKey inputAreaKey;
 
   @override
   Widget build(BuildContext context) {
@@ -773,18 +773,21 @@ class _ChatDetailBody extends StatelessWidget {
             ),
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (replyTarget != null)
-                _ReplyComposerBar(
-                  quote: replyTarget!,
-                  onCancel: onCancelReply,
-                ),
-              _buildInput(context),
-            ],
+        KeyedSubtree(
+          key: inputAreaKey,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (replyTarget != null)
+                  _ReplyComposerBar(
+                    quote: replyTarget!,
+                    onCancel: onCancelReply,
+                  ),
+                _buildInput(context),
+              ],
+            ),
           ),
         ),
       ],
@@ -808,7 +811,6 @@ class _ChatDetailBody extends StatelessWidget {
         onSend: onSend,
         onToggleAttachMenu: onToggleAttachMenu,
         onToggleRecording: onToggleRecording,
-        attachMenuLink: attachMenuLink,
       );
     }
     return _LegacyInputBar(
@@ -829,7 +831,6 @@ class _MediaInputBar extends StatelessWidget {
     required this.onSend,
     required this.onToggleAttachMenu,
     required this.onToggleRecording,
-    required this.attachMenuLink,
   });
 
   final TextEditingController controller;
@@ -839,7 +840,6 @@ class _MediaInputBar extends StatelessWidget {
   final Future<void> Function() onSend;
   final VoidCallback onToggleAttachMenu;
   final Future<void> Function() onToggleRecording;
-  final LayerLink attachMenuLink;
 
   @override
   Widget build(BuildContext context) {
@@ -902,18 +902,15 @@ class _MediaInputBar extends StatelessWidget {
                 ),
                 icon: Icon(LucideIcons.mic, color: primary),
               ),
-              CompositedTransformTarget(
-                link: attachMenuLink,
-                child: AnimatedRotation(
-                  turns: showAttachMenu ? 0.125 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: _CircleIconButton(
-                    tooltip: 'Attach',
-                    icon: LucideIcons.circlePlus,
-                    backgroundColor: primary,
-                    iconColor: Colors.white,
-                    onPressed: canSend ? onToggleAttachMenu : null,
-                  ),
+              AnimatedRotation(
+                turns: showAttachMenu ? 0.125 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: _CircleIconButton(
+                  tooltip: 'Attach',
+                  icon: LucideIcons.circlePlus,
+                  backgroundColor: primary,
+                  iconColor: Colors.white,
+                  onPressed: canSend ? onToggleAttachMenu : null,
                 ),
               ),
             ],
