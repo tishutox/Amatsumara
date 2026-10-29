@@ -172,7 +172,7 @@ class _AppShellState extends State<AppShell> {
       color: selected ? navColor : const Color(0xFF8E8E93),
     );
     final avatarUrl = _avatarUrl;
-    if (index != 3 || avatarUrl == null) {
+    if (index != _labels.indexOf('Me') || avatarUrl == null) {
       return fallback;
     }
 
@@ -226,7 +226,7 @@ class _AppShellState extends State<AppShell> {
         elevation: 0,
         actions: [
           if (_username != null) ...[
-            if (_currentIndex == 3) ...[
+            if (_currentIndex == _labels.indexOf('Me')) ...[
               IconButton(
                 tooltip: 'Copy profile link',
                 onPressed: _copyProfileLink,
