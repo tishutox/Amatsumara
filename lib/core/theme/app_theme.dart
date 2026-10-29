@@ -3,43 +3,30 @@
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData dark() {
-    return system(
-      primary: const Color(0xFFE26E83),
-      background: const Color(0xFF161518),
-      brightness: Brightness.dark,
-    );
-  }
+  static ThemeData light() {
+    const primary = Color(0xFF000000);
+    const background = Color(0xFFFFFFFF);
+    const surface = Color(0xFFF6F6F6);
+    const onSurface = Color(0xFF1A1A1A);
+    const outline = Color(0xFFD1D1D6);
+    const mutedIcon = Color(0xFF8E8E93);
 
-  static ThemeData system({
-    required Color primary,
-    required Color background,
-    required Brightness brightness,
-  }) {
-    final isDark = brightness == Brightness.dark;
-    final surface = isDark ? const Color(0xFF1B1B1F) : Colors.white;
-    final onSurface = isDark
-        ? const Color(0xFFF3F1F6)
-        : const Color(0xFF231F20);
-    final outline = isDark ? const Color(0xFFA29FA3) : const Color(0xFFF0E8E8);
     final colorScheme =
         ColorScheme.fromSeed(
           seedColor: primary,
-          brightness: brightness,
+          brightness: Brightness.light,
           primary: primary,
           surface: surface,
         ).copyWith(
           onPrimary: Colors.white,
           onSurface: onSurface,
           outline: outline,
-          surfaceContainerHighest: isDark
-              ? const Color(0xFF29282E)
-              : const Color(0xFFF7F5FA),
+          surfaceContainerHighest: const Color(0xFFEFEFF0),
         );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: brightness,
+      brightness: Brightness.light,
       shadowColor: Colors.transparent,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
@@ -64,10 +51,8 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark
-            ? const Color(0xFF202026)
-            : colorScheme.surfaceContainerHighest,
-        prefixIconColor: primary,
+        fillColor: const Color(0xFFF2F2F2),
+        prefixIconColor: mutedIcon,
         labelStyle: TextStyle(color: onSurface.withValues(alpha: 0.78)),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -132,8 +117,8 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark ? const Color(0xFF302F36) : onSurface,
-        contentTextStyle: TextStyle(color: isDark ? onSurface : Colors.white),
+        backgroundColor: onSurface,
+        contentTextStyle: const TextStyle(color: Colors.white),
       ),
       dividerColor: outline,
     );

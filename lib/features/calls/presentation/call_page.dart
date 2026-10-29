@@ -427,7 +427,7 @@ class _CallPageState extends State<CallPage> {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    final background = const Color(0xFF161518);
+    final background = const Color(0xFFFFFFFF);
 
     return Scaffold(
       backgroundColor: background,
@@ -468,7 +468,7 @@ class _CallPageState extends State<CallPage> {
               widget.displayName,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
+                color: Colors.black,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -478,7 +478,7 @@ class _CallPageState extends State<CallPage> {
               textAlign: TextAlign.center,
               style: Theme.of(
                 context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+              ).textTheme.bodyLarge?.copyWith(color: Colors.black54),
             ),
             const Spacer(),
             _buildControls(),
@@ -559,7 +559,7 @@ class _CallControlsBar extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: Colors.black.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(50),
       ),
       child: Row(
@@ -629,7 +629,9 @@ class _CircleControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor = Theme.of(context).colorScheme.error;
-    final effectiveIconColor = active ? activeColor : Colors.white;
+    final effectiveIconColor = active
+        ? activeColor
+        : (backgroundColor == Colors.transparent ? Colors.black : Colors.white);
 
     final iconWidget = rotateIcon
         ? Transform.rotate(

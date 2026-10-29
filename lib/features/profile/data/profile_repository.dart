@@ -69,7 +69,7 @@ class ProfileRepository {
       ),
       accentColor: profileColorFromHex(
         row['profile_accent_color'] as String?,
-        const Color(0xFFE26E83),
+        const Color(0xFF000000),
       ),
     );
   }

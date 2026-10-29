@@ -49,7 +49,7 @@ class _LumiiQuestAppState extends State<LumiiQuestApp> {
     return MaterialApp.router(
       title: 'Lumii Quest',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.dark(),
+      theme: AppTheme.light(),
       routerConfig: appRouter,
     );
   }
