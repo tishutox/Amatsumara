@@ -7,6 +7,7 @@ import 'package:lumii_quest/features/communities/presentation/communities_page.d
 import 'package:lumii_quest/features/home/presentation/home_page.dart';
 import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:lumii_quest/features/me/presentation/own_profile_page.dart';
+import 'package:lumii_quest/features/mods/presentation/mods_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -33,10 +34,11 @@ class _AppShellState extends State<AppShell> {
   RealtimeChannel? _incomingCallChannel;
   _IncomingCall? _incomingCall;
 
-  static const _labels = ['Discover', 'Communities', 'Chats', 'Me'];
+  static const _labels = ['Discover', 'Communities', 'Mods', 'Chats', 'Me'];
   static const _icons = [
     LucideIcons.compass,
     LucideIcons.layoutGridCircles,
+    LucideIcons.cpu,
     LucideIcons.messagesCircle,
     LucideIcons.circleUserRound,
   ];
@@ -45,6 +47,7 @@ class _AppShellState extends State<AppShell> {
     return [
       HomePage(navIconColor: navColor),
       const CommunitiesPage(),
+      const ModsPage(),
       const ChatsPage(),
       OwnProfilePage(reloadCount: _profileReloadCount),
     ];

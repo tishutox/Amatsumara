@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:audioplayers/audioplayers.dart';
@@ -41,6 +42,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isSending = false;
   bool _isRecording = false;
   bool _showAttachMenu = false;
+  static const List<IconData> _emojiFaces = [
+    LucideIcons.faceSlightlySmiling,
+    LucideIcons.faceNeutral,
+    LucideIcons.faceSlightlyFrowning,
+    LucideIcons.faceExpressionless,
+    LucideIcons.faceAngry,
+  ];
+  IconData _emojiIcon = LucideIcons.faceSlightlySmiling;
+  final Random _random = Random();
   final _inputAreaKey = GlobalKey();
   double _inputAreaHeight = 0;
   bool _didInitialScroll = false;
@@ -297,7 +307,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     }
   }
 
-  void _toggleAttachMenu() => _setAttachMenu(!_showAttachMenu);
+  void _toggleAttachMenu() {
+    if (!_showAttachMenu) {
+      _emojiIcon = _emojiFaces[_random.nextInt(_emojiFaces.length)];
+    }
+    _setAttachMenu(!_showAttachMenu);
+  }
+
+  Future<void> _pickEmoji() async {
+    _setAttachMenu(false);
+    _showError('Emojis are coming soon.');
+  }
 
   Future<void> _pickSticker() async {
     _setAttachMenu(false);
@@ -647,8 +667,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   right: 16,
                   bottom: _inputAreaHeight + 8,
                   child: _AttachMenu(
-                    onGallery: _sendImages,
+                    emojiIcon: _emojiIcon,
+                    onEmoji: _pickEmoji,
                     onSticker: _pickSticker,
+                    onGallery: _sendImages,
                   ),
                 ),
             ],
@@ -922,10 +944,17 @@ class _MediaInputBar extends StatelessWidget {
 }
 
 class _AttachMenu extends StatelessWidget {
-  const _AttachMenu({required this.onGallery, required this.onSticker});
+  const _AttachMenu({
+    required this.emojiIcon,
+    required this.onEmoji,
+    required this.onSticker,
+    required this.onGallery,
+  });
 
-  final VoidCallback onGallery;
+  final IconData emojiIcon;
+  final VoidCallback onEmoji;
   final VoidCallback onSticker;
+  final VoidCallback onGallery;
 
   @override
   Widget build(BuildContext context) {
@@ -942,10 +971,10 @@ class _AttachMenu extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _AttachOption(
-              icon: LucideIcons.image,
-              label: 'Gallery',
+              icon: emojiIcon,
+              label: 'Emoji',
               color: primary,
-              onTap: onGallery,
+              onTap: onEmoji,
             ),
             const SizedBox(width: 4),
             _AttachOption(
@@ -953,6 +982,13 @@ class _AttachMenu extends StatelessWidget {
               label: 'Sticker',
               color: primary,
               onTap: onSticker,
+            ),
+            const SizedBox(width: 4),
+            _AttachOption(
+              icon: LucideIcons.image,
+              label: 'Gallery',
+              color: primary,
+              onTap: onGallery,
             ),
           ],
         ),
