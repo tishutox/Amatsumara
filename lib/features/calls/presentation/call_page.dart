@@ -58,6 +58,8 @@ class _CallPageState extends State<CallPage> {
   bool _speakerOn = false;
   bool _videoOn = false;
   bool _overlayShown = false;
+  bool _remoteDescriptionSet = false;
+  final List<Map<String, dynamic>> _pendingIceCandidates = [];
 
   static const _overlayChannel = MethodChannel('lumii/call_overlay');
 
@@ -170,6 +172,8 @@ class _CallPageState extends State<CallPage> {
       await _pc!.setRemoteDescription(
         RTCSessionDescription(sdp['sdp'] as String, sdp['type'] as String),
       );
+      _remoteDescriptionSet = true;
+      await _flushPendingIce();
       final answer = await _pc!.createAnswer();
       await _pc!.setLocalDescription(answer);
       await _session!.send({
@@ -194,6 +198,8 @@ class _CallPageState extends State<CallPage> {
       await _pc!.setRemoteDescription(
         RTCSessionDescription(sdp['sdp'] as String, sdp['type'] as String),
       );
+      _remoteDescriptionSet = true;
+      await _flushPendingIce();
     } catch (error) {
       _fail('Call setup failed: $error');
     }
@@ -201,10 +207,22 @@ class _CallPageState extends State<CallPage> {
 
   Future<void> _onIce(Map<String, dynamic> payload) async {
     final candidate = payload['candidate'] as Map<String, dynamic>?;
-    final pc = _pc;
-    if (candidate == null || pc == null) {
+    if (candidate == null) {
       return;
     }
+    final pc = _pc;
+    if (pc == null || !_remoteDescriptionSet) {
+      // Queue the candidate until the remote description has been set.
+      _pendingIceCandidates.add(candidate);
+      return;
+    }
+    await _addIceCandidate(pc, candidate);
+  }
+
+  Future<void> _addIceCandidate(
+    RTCPeerConnection pc,
+    Map<String, dynamic> candidate,
+  ) async {
     try {
       await pc.addCandidate(
         RTCIceCandidate(
@@ -218,10 +236,32 @@ class _CallPageState extends State<CallPage> {
     }
   }
 
+  Future<void> _flushPendingIce() async {
+    final pc = _pc;
+    if (pc == null || _pendingIceCandidates.isEmpty) {
+      return;
+    }
+    final pending = List.of(_pendingIceCandidates);
+    _pendingIceCandidates.clear();
+    for (final candidate in pending) {
+      await _addIceCandidate(pc, candidate);
+    }
+  }
+
   Future<void> _setupPeerConnection() async {
+    _remoteDescriptionSet = false;
     _pc = await createPeerConnection({
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
+        {
+          'urls': [
+            'turn:openrelay.metered.ca:80',
+            'turn:openrelay.metered.ca:443',
+            'turn:openrelay.metered.ca:443?transport=tcp',
+          ],
+          'username': 'openrelayproject',
+          'credential': 'openrelayproject',
+        },
       ],
     });
 
@@ -270,6 +310,9 @@ class _CallPageState extends State<CallPage> {
       'video': widget.isVideoCall,
     });
     for (final track in stream.getTracks()) {
+      if (track.kind == 'audio') {
+        track.enabled = !_muted;
+      }
       await _pc!.addTrack(track, stream);
     }
     _localStream = stream;
@@ -357,12 +400,11 @@ class _CallPageState extends State<CallPage> {
   }
 
   Future<void> _toggleMute() async {
-    final tracks = _localStream?.getAudioTracks();
-    if (tracks == null || tracks.isEmpty) {
-      return;
-    }
     setState(() => _muted = !_muted);
-    tracks.first.enabled = !_muted;
+    final tracks = _localStream?.getAudioTracks();
+    if (tracks != null && tracks.isNotEmpty) {
+      tracks.first.enabled = !_muted;
+    }
   }
 
   Future<void> _toggleVideo() async {
