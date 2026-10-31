@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lumii_quest/features/calls/data/call_signaling.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
@@ -57,8 +57,9 @@ class _CallPageState extends State<CallPage> {
   bool _headphonesOff = false;
   bool _speakerOn = false;
   bool _videoOn = false;
-  StreamSubscription<dynamic>? _overlaySub;
   bool _overlayShown = false;
+
+  static const _overlayChannel = MethodChannel('lumii/call_overlay');
 
   String get _selfId => Supabase.instance.client.auth.currentUser?.id ?? '';
   String get _sessionId =>
@@ -356,47 +357,24 @@ class _CallPageState extends State<CallPage> {
   }
 
   Future<void> _toggleMute() async {
-    final track = _localStream?.getAudioTracks().firstOrNull;
-    if (track == null) {
+    final tracks = _localStream?.getAudioTracks();
+    if (tracks == null || tracks.isEmpty) {
       return;
     }
     setState(() => _muted = !_muted);
-    track.enabled = !_muted;
+    tracks.first.enabled = !_muted;
   }
 
   Future<void> _toggleVideo() async {
-    final pc = _pc;
     final localStream = _localStream;
-    if (pc == null || localStream == null) {
+    if (localStream == null) {
       return;
     }
-    if (_videoOn) {
-      for (final track in localStream.getVideoTracks()) {
-        track.enabled = false;
-      }
-      setState(() => _videoOn = false);
-      return;
+    final newState = !_videoOn;
+    for (final track in localStream.getVideoTracks()) {
+      track.enabled = newState;
     }
-    var videoTrack = localStream.getVideoTracks().firstOrNull;
-    if (videoTrack != null) {
-      videoTrack.enabled = true;
-      setState(() => _videoOn = true);
-      return;
-    }
-    final stream = await navigator.mediaDevices.getUserMedia({
-      'video': true,
-    });
-    videoTrack = stream.getVideoTracks().first;
-    await localStream.addTrack(videoTrack);
-    await pc.addTrack(videoTrack, localStream);
-    final offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await _session?.send({
-      'kind': 'offer',
-      'from': _selfId,
-      'sdp': {'type': offer.type, 'sdp': offer.sdp},
-    });
-    setState(() => _videoOn = true);
+    setState(() => _videoOn = newState);
   }
 
   Future<void> _toggleHeadphones() async {
@@ -421,43 +399,29 @@ class _CallPageState extends State<CallPage> {
       return;
     }
     try {
-      var granted = await FlutterOverlayWindow.isPermissionGranted();
+      final granted =
+          await _overlayChannel.invokeMethod<bool>('isOverlayGranted') ?? false;
       if (!granted) {
-        final requested = await FlutterOverlayWindow.requestPermission();
-        if (requested != true) {
-          return;
-        }
-        granted = true;
+        await _overlayChannel.invokeMethod('requestOverlayPermission');
+        return;
       }
-      await FlutterOverlayWindow.showOverlay(
-        height: 140,
-        width: 140,
-        alignment: OverlayAlignment.centerRight,
-        visibility: NotificationVisibility.visibilityPublic,
-        overlayTitle: 'Lumii Call',
-        overlayContent: widget.displayName,
-        enableDrag: true,
-        positionGravity: PositionGravity.auto,
-      );
-      _overlayShown = true;
-      _overlaySub = FlutterOverlayWindow.overlayListener.listen((message) {
-        // Tapping the bubble dismisses it and returns focus to the call.
-        unawaited(_hideCallOverlay());
+      await _overlayChannel.invokeMethod('show', {
+        'avatarUrl': _avatarUrl ?? '',
+        'name': widget.displayName,
       });
+      _overlayShown = true;
     } catch (_) {
       // The overlay is best-effort; ignore failures on unsupported devices.
     }
   }
 
   Future<void> _hideCallOverlay() async {
-    _overlaySub?.cancel();
-    _overlaySub = null;
     if (!_overlayShown) {
       return;
     }
     _overlayShown = false;
     try {
-      await FlutterOverlayWindow.closeOverlay();
+      await _overlayChannel.invokeMethod('hide');
     } catch (_) {
       // Ignore.
     }
@@ -600,6 +564,7 @@ class _CallPageState extends State<CallPage> {
         );
       default:
         return _CallControlsBar(
+          showVideo: widget.isVideoCall,
           videoOn: _videoOn,
           muted: _muted,
           headphonesOff: _headphonesOff,
@@ -616,6 +581,7 @@ class _CallPageState extends State<CallPage> {
 
 class _CallControlsBar extends StatelessWidget {
   const _CallControlsBar({
+    required this.showVideo,
     required this.videoOn,
     required this.muted,
     required this.headphonesOff,
@@ -627,6 +593,7 @@ class _CallControlsBar extends StatelessWidget {
     required this.onHangup,
   });
 
+  final bool showVideo;
   final bool videoOn;
   final bool muted;
   final bool headphonesOff;
@@ -649,13 +616,14 @@ class _CallControlsBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _CircleControl(
-            tooltip: videoOn ? 'Turn video off' : 'Turn video on',
-            icon: videoOn ? AppIcons.video : AppIcons.videoOff,
-            active: !videoOn,
-            size: 46,
-            onTap: onToggleVideo,
-          ),
+          if (showVideo)
+            _CircleControl(
+              tooltip: videoOn ? 'Turn video off' : 'Turn video on',
+              icon: videoOn ? AppIcons.video : AppIcons.videoOff,
+              active: !videoOn,
+              size: 46,
+              onTap: onToggleVideo,
+            ),
           _CircleControl(
             tooltip: muted ? 'Unmute' : 'Mute',
             icon: muted ? AppIcons.micOff : AppIcons.mic,
