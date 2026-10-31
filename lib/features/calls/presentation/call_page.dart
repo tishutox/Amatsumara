@@ -652,6 +652,7 @@ class _CallControlsBar extends StatelessWidget {
           _CircleControl(
             tooltip: videoOn ? 'Turn video off' : 'Turn video on',
             icon: videoOn ? AppIcons.video : AppIcons.videoOff,
+            active: !videoOn,
             size: 46,
             onTap: onToggleVideo,
           ),
