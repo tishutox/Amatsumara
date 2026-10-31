@@ -7,7 +7,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:lumii_quest/features/calls/data/call_signaling.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum _CallPhase {
@@ -26,6 +26,7 @@ class CallPage extends StatefulWidget {
     required this.displayName,
     this.incoming = false,
     this.avatarUrl,
+    this.isVideoCall = false,
     super.key,
   });
 
@@ -33,6 +34,7 @@ class CallPage extends StatefulWidget {
   final String displayName;
   final bool incoming;
   final String? avatarUrl;
+  final bool isVideoCall;
 
   @override
   State<CallPage> createState() => _CallPageState();
@@ -49,10 +51,12 @@ class _CallPageState extends State<CallPage> {
   RTCPeerConnection? _pc;
   MediaStream? _localStream;
   final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   CallSession? _session;
   bool _muted = false;
   bool _headphonesOff = false;
   bool _speakerOn = false;
+  bool _videoOn = false;
   StreamSubscription<dynamic>? _overlaySub;
   bool _overlayShown = false;
 
@@ -63,12 +67,14 @@ class _CallPageState extends State<CallPage> {
   @override
   void initState() {
     super.initState();
+    _videoOn = widget.isVideoCall;
     unawaited(_init());
   }
 
   Future<void> _init() async {
     try {
       await _remoteRenderer.initialize();
+      await _localRenderer.initialize();
       _avatarUrl = widget.avatarUrl;
       if (_avatarUrl == null || _avatarUrl!.isEmpty) {
         final profile = await _repository.fetchFriendProfile(widget.friendId);
@@ -105,6 +111,7 @@ class _CallPageState extends State<CallPage> {
     await _signaling.sendRing(
       peerUserId: widget.friendId,
       callerName: _myDisplayName(),
+      isVideoCall: widget.isVideoCall,
     );
   }
 
@@ -155,7 +162,9 @@ class _CallPageState extends State<CallPage> {
 
   Future<void> _onOffer(Map<String, dynamic> payload) async {
     try {
-      await _setupPeerConnection();
+      if (_pc == null) {
+        await _setupPeerConnection();
+      }
       final sdp = payload['sdp'] as Map<String, dynamic>;
       await _pc!.setRemoteDescription(
         RTCSessionDescription(sdp['sdp'] as String, sdp['type'] as String),
@@ -257,12 +266,13 @@ class _CallPageState extends State<CallPage> {
 
     final stream = await navigator.mediaDevices.getUserMedia({
       'audio': true,
-      'video': false,
+      'video': widget.isVideoCall,
     });
-    for (final track in stream.getAudioTracks()) {
+    for (final track in stream.getTracks()) {
       await _pc!.addTrack(track, stream);
     }
     _localStream = stream;
+    _localRenderer.srcObject = stream;
   }
 
   Future<void> _accept() async {
@@ -342,6 +352,7 @@ class _CallPageState extends State<CallPage> {
     await pc?.close();
 
     _remoteRenderer.srcObject = null;
+    _localRenderer.srcObject = null;
   }
 
   Future<void> _toggleMute() async {
@@ -351,6 +362,41 @@ class _CallPageState extends State<CallPage> {
     }
     setState(() => _muted = !_muted);
     track.enabled = !_muted;
+  }
+
+  Future<void> _toggleVideo() async {
+    final pc = _pc;
+    final localStream = _localStream;
+    if (pc == null || localStream == null) {
+      return;
+    }
+    if (_videoOn) {
+      for (final track in localStream.getVideoTracks()) {
+        track.enabled = false;
+      }
+      setState(() => _videoOn = false);
+      return;
+    }
+    var videoTrack = localStream.getVideoTracks().firstOrNull;
+    if (videoTrack != null) {
+      videoTrack.enabled = true;
+      setState(() => _videoOn = true);
+      return;
+    }
+    final stream = await navigator.mediaDevices.getUserMedia({
+      'video': true,
+    });
+    videoTrack = stream.getVideoTracks().first;
+    await localStream.addTrack(videoTrack);
+    await pc.addTrack(videoTrack, localStream);
+    final offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await _session?.send({
+      'kind': 'offer',
+      'from': _selfId,
+      'sdp': {'type': offer.type, 'sdp': offer.sdp},
+    });
+    setState(() => _videoOn = true);
   }
 
   Future<void> _toggleHeadphones() async {
@@ -421,6 +467,7 @@ class _CallPageState extends State<CallPage> {
   void dispose() {
     unawaited(_cleanup());
     unawaited(_remoteRenderer.dispose());
+    unawaited(_localRenderer.dispose());
     super.dispose();
   }
 
@@ -438,63 +485,94 @@ class _CallPageState extends State<CallPage> {
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(LucideIcons.chevronLeft),
+          icon: const AppIcon(AppIcons.chevronLeft),
         ),
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            const Spacer(),
-            Center(
-              child: CircleAvatar(
-                radius: 64,
-                backgroundColor: primary.withValues(alpha: 0.14),
-                backgroundImage: (_avatarUrl == null || _avatarUrl!.isEmpty)
-                    ? null
-                    : NetworkImage(_avatarUrl!),
-                child: (_avatarUrl == null || _avatarUrl!.isEmpty)
-                    ? Text(
-                        widget.displayName.trim().isEmpty
-                            ? '?'
-                            : widget.displayName.trim().characters.first
-                                  .toUpperCase(),
-                        style: TextStyle(fontSize: 44, color: primary),
-                      )
-                    : null,
+            Positioned.fill(
+              child: _videoOn
+                  ? RTCVideoView(
+                      _remoteRenderer,
+                      objectFit:
+                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                    )
+                  : _buildProfileHeader(primary),
+            ),
+            if (_videoOn)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    width: 120,
+                    height: 160,
+                    child: RTCVideoView(_localRenderer, mirror: true),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              widget.displayName,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.black,
-                fontWeight: FontWeight.w800,
+            if (!_videoOn)
+              Opacity(
+                opacity: 0,
+                child: SizedBox(
+                  width: 1,
+                  height: 1,
+                  child: RTCVideoView(_remoteRenderer, mirror: false),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _statusMessage,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: Colors.black54),
-            ),
-            const Spacer(),
-            _buildControls(),
-            const SizedBox(height: 28),
-            // Hidden view that plays the remote audio stream.
-            Opacity(
-              opacity: 0,
-              child: SizedBox(
-                width: 1,
-                height: 1,
-                child: RTCVideoView(_remoteRenderer, mirror: false),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: _buildControls(),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileHeader(Color primary) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        CircleAvatar(
+          radius: 64,
+          backgroundColor: primary.withValues(alpha: 0.14),
+          backgroundImage: (_avatarUrl == null || _avatarUrl!.isEmpty)
+              ? null
+              : NetworkImage(_avatarUrl!),
+          child: (_avatarUrl == null || _avatarUrl!.isEmpty)
+              ? Text(
+                  widget.displayName.trim().isEmpty
+                      ? '?'
+                      : widget.displayName.trim().characters.first
+                            .toUpperCase(),
+                  style: TextStyle(fontSize: 44, color: primary),
+                )
+              : null,
+        ),
+        const SizedBox(height: 20),
+        Text(
+          widget.displayName,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.black,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _statusMessage,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: Colors.black54),
+        ),
+      ],
     );
   }
 
@@ -506,7 +584,7 @@ class _CallPageState extends State<CallPage> {
           children: [
             _CircleControl(
               tooltip: 'Decline',
-              icon: LucideIcons.phone,
+              icon: AppIcons.phone,
               rotateIcon: true,
               backgroundColor: const Color(0xFFE53935),
               onTap: _decline,
@@ -514,7 +592,7 @@ class _CallPageState extends State<CallPage> {
             const SizedBox(width: 48),
             _CircleControl(
               tooltip: 'Accept',
-              icon: LucideIcons.phone,
+              icon: AppIcons.phone,
               backgroundColor: const Color(0xFF43A047),
               onTap: _accept,
             ),
@@ -522,9 +600,11 @@ class _CallPageState extends State<CallPage> {
         );
       default:
         return _CallControlsBar(
+          videoOn: _videoOn,
           muted: _muted,
           headphonesOff: _headphonesOff,
           speakerOn: _speakerOn,
+          onToggleVideo: _toggleVideo,
           onToggleMute: _toggleMute,
           onToggleHeadphones: _toggleHeadphones,
           onToggleSpeaker: _toggleSpeaker,
@@ -536,18 +616,22 @@ class _CallPageState extends State<CallPage> {
 
 class _CallControlsBar extends StatelessWidget {
   const _CallControlsBar({
+    required this.videoOn,
     required this.muted,
     required this.headphonesOff,
     required this.speakerOn,
+    required this.onToggleVideo,
     required this.onToggleMute,
     required this.onToggleHeadphones,
     required this.onToggleSpeaker,
     required this.onHangup,
   });
 
+  final bool videoOn;
   final bool muted;
   final bool headphonesOff;
   final bool speakerOn;
+  final VoidCallback onToggleVideo;
   final VoidCallback onToggleMute;
   final VoidCallback onToggleHeadphones;
   final VoidCallback onToggleSpeaker;
@@ -566,13 +650,14 @@ class _CallControlsBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _CircleControl(
-            tooltip: 'Video',
-            icon: LucideIcons.video,
+            tooltip: videoOn ? 'Turn video off' : 'Turn video on',
+            icon: videoOn ? AppIcons.video : AppIcons.videoOff,
             size: 46,
+            onTap: onToggleVideo,
           ),
           _CircleControl(
             tooltip: muted ? 'Unmute' : 'Mute',
-            icon: LucideIcons.mic,
+            icon: muted ? AppIcons.micOff : AppIcons.mic,
             active: muted,
             size: 46,
             onTap: onToggleMute,
@@ -580,22 +665,22 @@ class _CallControlsBar extends StatelessWidget {
           _CircleControl(
             tooltip: headphonesOff ? 'Headphones on' : 'Headphones off',
             icon: headphonesOff
-                ? LucideIcons.headphoneOff
-                : LucideIcons.headphones,
+                ? AppIcons.headphoneOff
+                : AppIcons.headphones,
             active: headphonesOff,
             size: 46,
             onTap: onToggleHeadphones,
           ),
           _CircleControl(
             tooltip: speakerOn ? 'Speaker off' : 'Speaker on',
-            icon: speakerOn ? LucideIcons.volumeOff : LucideIcons.volume2,
+            icon: speakerOn ? AppIcons.volumeOff : AppIcons.volume2,
             active: speakerOn,
             size: 46,
             onTap: onToggleSpeaker,
           ),
           _CircleControl(
             tooltip: 'End call',
-            icon: LucideIcons.phone,
+            icon: AppIcons.phone,
             rotateIcon: true,
             backgroundColor: const Color(0xFFE53935),
             size: 46,
@@ -619,7 +704,7 @@ class _CircleControl extends StatelessWidget {
   });
 
   final String tooltip;
-  final IconData icon;
+  final String icon;
   final bool active;
   final Color backgroundColor;
   final double size;
@@ -636,9 +721,9 @@ class _CircleControl extends StatelessWidget {
     final iconWidget = rotateIcon
         ? Transform.rotate(
             angle: math.pi * 3 / 4,
-            child: Icon(icon, color: effectiveIconColor, size: size * 0.42),
+            child: AppIcon(icon, color: effectiveIconColor, size: size * 0.42),
           )
-        : Icon(icon, color: effectiveIconColor, size: size * 0.42);
+        : AppIcon(icon, color: effectiveIconColor, size: size * 0.42);
 
     return Material(
       color: backgroundColor,

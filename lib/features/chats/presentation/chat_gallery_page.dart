@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lumii_quest/features/chats/domain/chat_message_content.dart';
 import 'package:lumii_quest/features/chats/presentation/media_download.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 
 /// Grid gallery opened when tapping an image collection.
 class ChatGalleryPage extends StatelessWidget {
@@ -20,7 +20,7 @@ class ChatGalleryPage extends StatelessWidget {
         leading: IconButton(
           tooltip: 'Close',
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(LucideIcons.x),
+          icon: const AppIcon(AppIcons.x),
         ),
         title: Text(
           '${images.length} ${images.length == 1 ? 'image' : 'images'}',
@@ -53,7 +53,7 @@ class ChatGalleryPage extends StatelessWidget {
                 errorBuilder: (_, _, _) => const ColoredBox(
                   color: Color(0xFF222222),
                   child: Center(
-                    child: Icon(LucideIcons.imageOff, color: Colors.white54),
+                    child: AppIcon(AppIcons.imageOff, color: Colors.white54),
                   ),
                 ),
               ),
@@ -96,14 +96,14 @@ class _ChatImageViewerPageState extends State<ChatImageViewerPage> {
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(LucideIcons.chevronLeft),
+          icon: const AppIcon(AppIcons.chevronLeft),
         ),
         title: Text('${_index + 1} / ${widget.images.length}'),
         actions: [
           IconButton(
             tooltip: 'Download',
             onPressed: _busy ? null : () => _download(current),
-            icon: const Icon(LucideIcons.download),
+            icon: const AppIcon(AppIcons.download),
           ),
         ],
       ),
@@ -126,7 +126,7 @@ class _ChatImageViewerPageState extends State<ChatImageViewerPage> {
                         child: CircularProgressIndicator(color: Colors.white),
                       ),
                 errorBuilder: (_, _, _) => const Center(
-                  child: Icon(LucideIcons.imageOff, color: Colors.white70),
+                  child: AppIcon(AppIcons.imageOff, color: Colors.white70),
                 ),
               ),
             ),

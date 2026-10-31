@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -225,14 +225,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
       appBar: AppBar(
         leading: IconButton(
           onPressed: () => context.pop(),
-          icon: const Icon(LucideIcons.chevronLeft),
+          icon: const AppIcon(AppIcons.chevronLeft),
         ),
         title: const Text('Edit Profile'),
         actions: [
           TextButton.icon(
             onPressed: _saving ? null : _save,
-            icon: const Icon(LucideIcons.save),
-            label: Text(_saving ? 'Saving…' : 'Save'),
+            icon: const AppIcon(AppIcons.save),
+            label: Text(_saving ? 'SavingÃ¢â‚¬Â¦' : 'Save'),
           ),
         ],
       ),
@@ -277,7 +277,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             title: 'Profile banner',
                             aspectRatio: 3,
                             recommendation:
-                                'Recommended size: 1500 × 500 px (3:1)',
+                                'Recommended size: 1500 Ãƒâ€” 500 px (3:1)',
                             imageProvider: _bannerBytes != null
                                 ? MemoryImage(_bannerBytes!)
                                 : !_removeBanner && _profile!.bannerUrl != null
@@ -320,7 +320,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           const SizedBox(height: 14),
                           DropdownButtonFormField<BioAlignment>(
                             initialValue: _alignment,
-                            icon: const Icon(LucideIcons.chevronDown),
+                            icon: const AppIcon(AppIcons.chevronDown),
                             decoration: const InputDecoration(
                               labelText: 'Bio alignment',
                               border: OutlineInputBorder(),
@@ -377,7 +377,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               )
                                 ListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(LucideIcons.bookHeart),
+                                  leading: const AppIcon(AppIcons.bookHeart),
                                   title: Text(_mentions[index].tag),
                                   subtitle: Text(
                                     '@${_mentions[index].username}',
@@ -388,8 +388,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                       IconButton(
                                         tooltip: 'Edit',
                                         onPressed: () => _editMention(index),
-                                        icon: const Icon(
-                                          LucideIcons.pencilRuler,
+                                        icon: const AppIcon(
+                                          AppIcons.pencilRuler,
                                         ),
                                       ),
                                       IconButton(
@@ -397,7 +397,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                         onPressed: () => setState(
                                           () => _mentions.removeAt(index),
                                         ),
-                                        icon: const Icon(LucideIcons.trash),
+                                        icon: const AppIcon(AppIcons.trash),
                                       ),
                                     ],
                                   ),
@@ -407,8 +407,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           const SizedBox(height: 28),
                           FilledButton.icon(
                             onPressed: _saving ? null : _save,
-                            icon: const Icon(LucideIcons.save),
-                            label: Text(_saving ? 'Saving…' : 'Save profile'),
+                            icon: const AppIcon(AppIcons.save),
+                            label: Text(_saving ? 'SavingÃ¢â‚¬Â¦' : 'Save profile'),
                           ),
                         ],
                       ),
@@ -452,7 +452,7 @@ class _ImageEditor extends StatelessWidget {
               color: Theme.of(
                 context,
               ).colorScheme.primary.withValues(alpha: 0.12),
-              child: const Center(child: Icon(LucideIcons.imageUp, size: 36)),
+              child: const Center(child: AppIcon(AppIcons.imageUp, size: 36)),
             )
           : Image(image: imageProvider!, fit: BoxFit.cover),
     );
@@ -484,12 +484,12 @@ class _ImageEditor extends StatelessWidget {
           children: [
             OutlinedButton.icon(
               onPressed: onChange,
-              icon: const Icon(LucideIcons.imageUp),
+              icon: const AppIcon(AppIcons.imageUp),
               label: const Text('Change'),
             ),
             TextButton.icon(
               onPressed: imageProvider == null ? null : onRemove,
-              icon: const Icon(LucideIcons.trash),
+              icon: const AppIcon(AppIcons.trash),
               label: const Text('Remove'),
             ),
           ],
@@ -529,7 +529,7 @@ class _EditorSection extends StatelessWidget {
             ),
             OutlinedButton.icon(
               onPressed: onAdd,
-              icon: const Icon(LucideIcons.plus),
+              icon: const AppIcon(AppIcons.plus),
               label: const Text('Add'),
             ),
           ],
@@ -730,7 +730,7 @@ class _MentionDialogState extends State<_MentionDialog> {
             maxLength: 15,
             decoration: const InputDecoration(
               labelText: 'Your tag',
-              hintText: 'Bestie, BF, …',
+              hintText: 'Bestie, BF, Ã¢â‚¬Â¦',
             ),
           ),
         ],

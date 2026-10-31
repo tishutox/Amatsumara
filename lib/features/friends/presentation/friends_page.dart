@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:lumii_quest/features/friends/data/friend_repository.dart';
 import 'package:lumii_quest/features/friends/domain/friend_summary.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -44,7 +44,7 @@ class _FriendsPageState extends State<FriendsPage> {
             leading: IconButton(
               tooltip: 'Back',
               onPressed: () => context.pop(),
-              icon: const Icon(LucideIcons.chevronLeft),
+              icon: const AppIcon(AppIcons.chevronLeft),
             ),
             title: const Text('Friends'),
             foregroundColor: themedPrimary,
@@ -53,7 +53,7 @@ class _FriendsPageState extends State<FriendsPage> {
               IconButton(
                 tooltip: 'Refresh',
                 onPressed: _refresh,
-                icon: const Icon(LucideIcons.refreshCcw),
+                icon: const AppIcon(AppIcons.refreshCcw),
               ),
             ],
           ),
@@ -108,7 +108,7 @@ class _FriendsBody extends StatelessWidget {
                 children: [
                   DropdownButton<FriendSortField>(
                     value: sortField,
-                    icon: const Icon(LucideIcons.chevronDown),
+                    icon: const AppIcon(AppIcons.chevronDown),
                     borderRadius: BorderRadius.circular(14),
                     onChanged: (value) {
                       if (value != null) {
@@ -126,7 +126,7 @@ class _FriendsBody extends StatelessWidget {
                   ),
                   DropdownButton<FriendSortDirection>(
                     value: sortDirection,
-                    icon: const Icon(LucideIcons.chevronDown),
+                    icon: const AppIcon(AppIcons.chevronDown),
                     borderRadius: BorderRadius.circular(14),
                     onChanged: (value) {
                       if (value != null) {
@@ -156,11 +156,11 @@ class _FriendsBody extends StatelessWidget {
             }
             if (snapshot.hasError) {
               return _EmptyFriendsState(
-                icon: LucideIcons.triangleAlert,
+                icon: AppIcons.triangleAlert,
                 message: 'Friends could not be loaded.',
                 action: TextButton.icon(
                   onPressed: onReload,
-                  icon: const Icon(LucideIcons.refreshCcw),
+                  icon: const AppIcon(AppIcons.refreshCcw),
                   label: const Text('Try again'),
                 ),
               );
@@ -173,7 +173,7 @@ class _FriendsBody extends StatelessWidget {
             );
             if (friends.isEmpty) {
               return const _EmptyFriendsState(
-                icon: LucideIcons.bookHeart,
+                icon: AppIcons.bookHeart,
                 message:
                     'No friends yet. Friend requests will appear from profiles and notifications.',
               );
@@ -217,7 +217,7 @@ class _FriendTile extends StatelessWidget {
         ),
         title: Text(friend.displayName),
         subtitle: Text('@${friend.username}'),
-        trailing: Icon(LucideIcons.chevronRight, color: primary),
+        trailing: AppIcon(AppIcons.chevronRight, color: primary),
       ),
     );
   }
@@ -230,7 +230,7 @@ class _EmptyFriendsState extends StatelessWidget {
     this.action,
   });
 
-  final IconData icon;
+  final String icon;
   final String message;
   final Widget? action;
 
@@ -243,7 +243,7 @@ class _EmptyFriendsState extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              Icon(icon, size: 42, color: primary),
+              AppIcon(icon, size: 42, color: primary),
               const SizedBox(height: 12),
               Text(message, textAlign: TextAlign.center),
               if (action != null) ...[const SizedBox(height: 12), action!],

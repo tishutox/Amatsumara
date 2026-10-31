@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -19,7 +19,7 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   const CircleAvatar(
                     radius: 36,
-                    child: Icon(LucideIcons.userRound),
+                    child: AppIcon(AppIcons.userRound),
                   ),
                   const SizedBox(height: 12),
                   Text(

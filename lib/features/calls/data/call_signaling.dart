@@ -41,6 +41,7 @@ class CallSignaling {
     required String peerUserId,
     required String callerName,
     String? callerAvatarUrl,
+    bool isVideoCall = false,
   }) async {
     final channel = _client.channel(personalChannel(peerUserId));
     final payload = <String, dynamic>{
@@ -48,6 +49,7 @@ class CallSignaling {
       'from': _selfId,
       'name': callerName,
       'avatarUrl': callerAvatarUrl,
+      'video': isVideoCall,
     };
 
     // Subscribe over WebSocket first so the ring is delivered reliably to the

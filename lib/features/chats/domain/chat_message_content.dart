@@ -107,7 +107,7 @@ class ChatMessageContent {
   };
 
   static String _ellipsis(String value) =>
-      value.length > 60 ? '${value.substring(0, 60)}…' : value;
+      value.length > 60 ? '${value.substring(0, 60)}Ã¢â‚¬Â¦' : value;
 
   String encode() {
     if (replyTo == null) {

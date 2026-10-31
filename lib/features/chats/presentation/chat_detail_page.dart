@@ -12,7 +12,7 @@ import 'package:lumii_quest/features/chats/data/chat_repository.dart';
 import 'package:lumii_quest/features/chats/domain/chat_message_content.dart';
 import 'package:lumii_quest/features/chats/presentation/chat_gallery_page.dart';
 import 'package:lumii_quest/features/chats/presentation/recording_file_io.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -42,14 +42,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   bool _isSending = false;
   bool _isRecording = false;
   bool _showAttachMenu = false;
-  static const List<IconData> _emojiFaces = [
-    LucideIcons.faceSlightlySmiling,
-    LucideIcons.faceNeutral,
-    LucideIcons.faceSlightlyFrowning,
-    LucideIcons.faceExpressionless,
-    LucideIcons.faceAngry,
+  static const List<String> _emojiFaces = [
+    AppIcons.faceSlightlySmiling,
+    AppIcons.faceNeutral,
+    AppIcons.faceSlightlyFrowning,
+    AppIcons.faceExpressionless,
+    AppIcons.faceAngry,
   ];
-  IconData _emojiIcon = LucideIcons.faceSlightlySmiling;
+  String _emojiIcon = AppIcons.faceSlightlySmiling;
   final Random _random = Random();
   final _inputAreaKey = GlobalKey();
   double _inputAreaHeight = 0;
@@ -429,11 +429,14 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     setState(() => _replyTarget = null);
   }
 
-  void _startCall() {
+  void _startCall({bool video = false}) {
     context.push(
       Uri(
         path: '/call/${widget.friendId}',
-        queryParameters: {'name': widget.displayName},
+        queryParameters: {
+          'name': widget.displayName,
+          'video': video ? 'true' : 'false',
+        },
       ).toString(),
     );
   }
@@ -557,15 +560,15 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     final action = await _showMenuAt(context, globalPosition, [
       const PopupMenuItem(
         value: 'reply',
-        child: _MenuRow(icon: LucideIcons.reply, label: 'Reply'),
+        child: _MenuRow(icon: AppIcons.reply, label: 'Reply'),
       ),
       const PopupMenuItem(
         value: 'redirect',
-        child: _MenuRow(icon: LucideIcons.send, label: 'Redirect'),
+        child: _MenuRow(icon: AppIcons.send, label: 'Redirect'),
       ),
       const PopupMenuItem(
         value: 'delete',
-        child: _MenuRow(icon: LucideIcons.trash, label: 'Delete'),
+        child: _MenuRow(icon: AppIcons.trash, label: 'Delete'),
       ),
     ]);
 
@@ -587,11 +590,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
         final deleteAction = await _showMenuAt(context, globalPosition, [
           const PopupMenuItem(
             value: 'delete_all',
-            child: _MenuRow(icon: LucideIcons.trash, label: 'Delete for All'),
+            child: _MenuRow(icon: AppIcons.trash, label: 'Delete for All'),
           ),
           const PopupMenuItem(
             value: 'delete_me',
-            child: _MenuRow(icon: LucideIcons.userX, label: 'Delete for Me'),
+            child: _MenuRow(icon: AppIcons.userX, label: 'Delete for Me'),
           ),
         ]);
         if (!mounted || deleteAction == null) return;
@@ -614,7 +617,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             leading: IconButton(
               tooltip: 'Back',
               onPressed: () => context.pop(),
-              icon: const Icon(LucideIcons.chevronLeft),
+              icon: const AppIcon(AppIcons.chevronLeft),
             ),
             title: Text(widget.displayName),
             foregroundColor: themedPrimary,
@@ -622,13 +625,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             actions: [
               IconButton(
                 tooltip: 'Video call',
-                onPressed: () {},
-                icon: const Icon(LucideIcons.video),
+                onPressed: () => _startCall(video: true),
+                icon: const AppIcon(AppIcons.video),
               ),
               IconButton(
                 tooltip: 'Voice call',
-                onPressed: _startCall,
-                icon: const Icon(LucideIcons.phone),
+                onPressed: () => _startCall(),
+                icon: const AppIcon(AppIcons.phone),
               ),
             ],
           ),
@@ -749,7 +752,7 @@ class _ChatDetailBody extends StatelessWidget {
         if (setupError != null)
           MaterialBanner(
             content: Text(setupError!),
-            leading: const Icon(LucideIcons.lock),
+            leading: const AppIcon(AppIcons.lock),
             actions: [
               TextButton(onPressed: onRefresh, child: const Text('Refresh')),
             ],
@@ -766,14 +769,14 @@ class _ChatDetailBody extends StatelessWidget {
                 }
                 if (snapshot.hasError) {
                   return const _ChatInfoState(
-                    icon: LucideIcons.triangleAlert,
+                    icon: AppIcons.triangleAlert,
                     message: 'Messages could not be loaded.',
                   );
                 }
                 final messages = snapshot.data ?? const [];
                 if (messages.isEmpty) {
                   return const _ChatInfoState(
-                    icon: LucideIcons.messageCircle,
+                    icon: AppIcons.messageCircle,
                     message: 'No messages yet. Say hi.',
                   );
                 }
@@ -905,8 +908,8 @@ class _MediaInputBar extends StatelessWidget {
               _CircleIconButton(
                 tooltip: 'Send',
                 icon: isSending
-                    ? LucideIcons.loaderCircle
-                    : LucideIcons.sendHorizontal,
+                    ? AppIcons.loaderCircle
+                    : AppIcons.sendHorizontal,
                 backgroundColor: primary,
                 iconColor: Colors.white,
                 onPressed: canSend ? onSend : null,
@@ -922,14 +925,14 @@ class _MediaInputBar extends StatelessWidget {
                   minWidth: 44,
                   minHeight: 44,
                 ),
-                icon: Icon(LucideIcons.mic, color: primary),
+                icon: AppIcon(AppIcons.mic, color: primary),
               ),
               AnimatedRotation(
                 turns: showAttachMenu ? 0.125 : 0,
                 duration: const Duration(milliseconds: 200),
                 child: _CircleIconButton(
                   tooltip: 'Attach',
-                  icon: LucideIcons.circlePlus,
+                  icon: AppIcons.circlePlus,
                   backgroundColor: primary,
                   iconColor: Colors.white,
                   onPressed: canSend ? onToggleAttachMenu : null,
@@ -951,7 +954,7 @@ class _AttachMenu extends StatelessWidget {
     required this.onGallery,
   });
 
-  final IconData emojiIcon;
+  final String emojiIcon;
   final VoidCallback onEmoji;
   final VoidCallback onSticker;
   final VoidCallback onGallery;
@@ -978,14 +981,14 @@ class _AttachMenu extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             _AttachOption(
-              icon: LucideIcons.sticker,
+              icon: AppIcons.sticker,
               label: 'Sticker',
               color: primary,
               onTap: onSticker,
             ),
             const SizedBox(width: 4),
             _AttachOption(
-              icon: LucideIcons.image,
+              icon: AppIcons.image,
               label: 'Gallery',
               color: primary,
               onTap: onGallery,
@@ -1005,7 +1008,7 @@ class _AttachOption extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  final String icon;
   final String label;
   final Color color;
   final VoidCallback onTap;
@@ -1019,7 +1022,7 @@ class _AttachOption extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-          child: Icon(icon, color: color),
+          child: AppIcon(icon, color: color),
         ),
       ),
     );
@@ -1055,7 +1058,7 @@ class _RecordingInputBar extends StatelessWidget {
           children: [
             _CircleIconButton(
               tooltip: 'Cancel recording',
-              icon: LucideIcons.trash,
+              icon: AppIcons.trash,
               backgroundColor: error.withValues(alpha: 0.16),
               iconColor: error,
               onPressed: onCancel,
@@ -1065,7 +1068,7 @@ class _RecordingInputBar extends StatelessWidget {
             const SizedBox(width: 8),
             _CircleIconButton(
               tooltip: 'Send voice message',
-              icon: LucideIcons.sendHorizontal,
+              icon: AppIcons.sendHorizontal,
               backgroundColor: primary,
               iconColor: Colors.white,
               onPressed: onFinish,
@@ -1116,8 +1119,8 @@ class _LegacyInputBar extends StatelessWidget {
           const SizedBox(width: 8),
           FilledButton(
             onPressed: friendDeviceCount == 0 || isSending ? null : onSend,
-            child: Icon(
-              isSending ? LucideIcons.loaderCircle : LucideIcons.sendHorizontal,
+            child: AppIcon(
+              isSending ? AppIcons.loaderCircle : AppIcons.sendHorizontal,
             ),
           ),
         ],
@@ -1136,7 +1139,7 @@ class _CircleIconButton extends StatelessWidget {
   });
 
   final String tooltip;
-  final IconData icon;
+  final String icon;
   final Color backgroundColor;
   final Color iconColor;
   final VoidCallback? onPressed;
@@ -1154,7 +1157,7 @@ class _CircleIconButton extends StatelessWidget {
           onPressed: onPressed,
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
-          icon: Icon(icon, color: iconColor, size: 24),
+          icon: AppIcon(icon, color: iconColor, size: 24),
         ),
       ),
     );
@@ -1456,7 +1459,7 @@ class _GalleryBubble extends StatelessWidget {
               ? child
               : const Center(child: CircularProgressIndicator()),
           errorBuilder: (_, _, _) => const Center(
-            child: Icon(LucideIcons.imageOff),
+            child: AppIcon(AppIcons.imageOff),
           ),
         ),
       ),
@@ -1506,7 +1509,7 @@ class _ImageMessageBubble extends StatelessWidget {
           errorBuilder: (_, _, _) => const SizedBox(
             width: 260,
             height: 160,
-            child: Center(child: Icon(LucideIcons.imageOff)),
+            child: Center(child: AppIcon(AppIcons.imageOff)),
           ),
         ),
       ),
@@ -1575,8 +1578,8 @@ class _AudioMessageBubbleState extends State<_AudioMessageBubble> {
           IconButton(
             tooltip: _isPlaying ? 'Pause' : 'Play',
             onPressed: _toggle,
-            icon: Icon(
-              _isPlaying ? LucideIcons.pause : LucideIcons.play,
+            icon: AppIcon(
+              _isPlaying ? AppIcons.pause : AppIcons.play,
               color: widget.textColor,
             ),
           ),
@@ -1632,7 +1635,7 @@ String _audioContentType(String extension) => switch (extension) {
 class _ChatInfoState extends StatelessWidget {
   const _ChatInfoState({required this.icon, required this.message});
 
-  final IconData icon;
+  final String icon;
   final String message;
 
   @override
@@ -1642,7 +1645,7 @@ class _ChatInfoState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: primary, size: 44),
+          AppIcon(icon, color: primary, size: 44),
           const SizedBox(height: 12),
           Text(message, textAlign: TextAlign.center),
         ],
@@ -1739,7 +1742,7 @@ class _ReplyComposerBar extends StatelessWidget {
               IconButton(
                 tooltip: 'Cancel reply',
                 onPressed: onCancel,
-                icon: const Icon(LucideIcons.x),
+                icon: const AppIcon(AppIcons.x),
               ),
             ],
           ),
@@ -1752,14 +1755,14 @@ class _ReplyComposerBar extends StatelessWidget {
 class _MenuRow extends StatelessWidget {
   const _MenuRow({required this.icon, required this.label});
 
-  final IconData icon;
+  final String icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18),
+        AppIcon(icon, size: 18),
         const SizedBox(width: 12),
         Text(label),
       ],

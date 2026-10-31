@@ -11,7 +11,7 @@ import 'package:lumii_quest/features/mods/presentation/mods_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppShell extends StatefulWidget {
@@ -36,11 +36,11 @@ class _AppShellState extends State<AppShell> {
 
   static const _labels = ['Discover', 'Communities', 'Mods', 'Chats', 'Me'];
   static const _icons = [
-    LucideIcons.compass,
-    LucideIcons.layoutGridCircles,
-    LucideIcons.cpu,
-    LucideIcons.messagesCircle,
-    LucideIcons.circleUserRound,
+    AppIcons.compass,
+    AppIcons.layoutGridCircles,
+    AppIcons.cpu,
+    AppIcons.messagesCircle,
+    AppIcons.circleUserRound,
   ];
 
   List<Widget> _buildPages(Color navColor) {
@@ -90,11 +90,13 @@ class _AppShellState extends State<AppShell> {
     }
     final name = payload['name'] as String? ?? 'Lumii user';
     final avatar = payload['avatarUrl'] as String?;
+    final video = payload['video'] == true;
     setState(() {
       _incomingCall = _IncomingCall(
         callerId: from,
         name: name,
         avatarUrl: avatar,
+        video: video,
       );
     });
   }
@@ -111,6 +113,7 @@ class _AppShellState extends State<AppShell> {
           if (call.avatarUrl != null && call.avatarUrl!.isNotEmpty)
             'avatar': call.avatarUrl!,
           'incoming': 'true',
+          'video': call.video ? 'true' : 'false',
         },
       ).toString(),
     );
@@ -167,7 +170,7 @@ class _AppShellState extends State<AppShell> {
     required bool selected,
     required Color navColor,
   }) {
-    final fallback = Icon(
+    final fallback = AppIcon(
       _icons[index],
       color: selected ? navColor : const Color(0xFF8E8E93),
     );
@@ -218,7 +221,7 @@ class _AppShellState extends State<AppShell> {
         title: IconButton(
           tooltip: 'Notifications',
           onPressed: () => context.push('/notifications'),
-          icon: const Icon(LucideIcons.bell),
+          icon: const AppIcon(AppIcons.bell),
         ),
         foregroundColor: navColor,
         backgroundColor: backgroundColor,
@@ -230,23 +233,23 @@ class _AppShellState extends State<AppShell> {
               IconButton(
                 tooltip: 'Copy profile link',
                 onPressed: _copyProfileLink,
-                icon: const Icon(LucideIcons.link),
+                icon: const AppIcon(AppIcons.link),
               ),
               IconButton(
                 tooltip: 'Edit profile',
                 onPressed: _editProfile,
-                icon: const Icon(LucideIcons.pencilRuler),
+                icon: const AppIcon(AppIcons.pencilRuler),
               ),
             ] else ...[
               IconButton(
                 tooltip: 'Friends list',
                 onPressed: () => context.push('/friends'),
-                icon: const Icon(LucideIcons.bookHeart),
+                icon: const AppIcon(AppIcons.bookHeart),
               ),
               IconButton(
                 tooltip: 'Settings',
                 onPressed: () => context.push('/settings'),
-                icon: const Icon(LucideIcons.bolt),
+                icon: const AppIcon(AppIcons.bolt),
               ),
             ],
           ],
@@ -408,11 +411,13 @@ class _IncomingCall {
     required this.callerId,
     required this.name,
     this.avatarUrl,
+    this.video = false,
   });
 
   final String callerId;
   final String name;
   final String? avatarUrl;
+  final bool video;
 }
 
 class _IncomingCallBanner extends StatelessWidget {
@@ -491,7 +496,7 @@ class _IncomingCallBanner extends StatelessWidget {
                   backgroundColor: Theme.of(context).colorScheme.error,
                   foregroundColor: Colors.white,
                 ),
-                icon: const Icon(LucideIcons.phone),
+                icon: const AppIcon(AppIcons.phone),
               ),
               const SizedBox(width: 8),
               IconButton(
@@ -501,7 +506,7 @@ class _IncomingCallBanner extends StatelessWidget {
                   backgroundColor: const Color(0xFF43A047),
                   foregroundColor: Colors.white,
                 ),
-                icon: const Icon(LucideIcons.phone),
+                icon: const AppIcon(AppIcons.phone),
               ),
             ],
           ),

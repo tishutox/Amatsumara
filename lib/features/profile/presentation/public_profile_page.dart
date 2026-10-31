@@ -7,7 +7,7 @@ import 'package:lumii_quest/features/friends/data/friend_repository.dart';
 import 'package:lumii_quest/features/friends/domain/relationship_status.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -154,7 +154,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
               leading: IconButton(
                 onPressed: () =>
                     context.canPop() ? context.pop() : context.go('/'),
-                icon: const Icon(LucideIcons.chevronLeft),
+                icon: const AppIcon(AppIcons.chevronLeft),
               ),
               actions: [
                 if (_showsRelationshipAction)
@@ -166,10 +166,10 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
                                 RelationshipStatus.outgoingPending
                         ? null
                         : _handleRelationship,
-                    icon: Icon(
+                    icon: AppIcon(
                       _relationshipStatus == RelationshipStatus.friends
-                          ? LucideIcons.userMinus
-                          : LucideIcons.userPlus,
+                          ? AppIcons.userMinus
+                          : AppIcons.userPlus,
                     ),
                   ),
                 _copyLinkButton(),
@@ -210,7 +210,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
         await Clipboard.setData(ClipboardData(text: link));
         if (mounted) _showMessage('Profile link copied.');
       },
-      icon: const Icon(LucideIcons.link),
+      icon: const AppIcon(AppIcons.link),
     );
   }
 
@@ -412,14 +412,14 @@ class _Banner extends StatelessWidget {
           color: color,
           child: url == null
               ? Center(
-                  child: Icon(LucideIcons.image, size: 36, color: accentColor),
+                  child: AppIcon(AppIcons.image, size: 36, color: accentColor),
                 )
               : Image.network(
                   url!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Center(
-                    child: Icon(
-                      LucideIcons.image,
+                    child: AppIcon(
+                      AppIcons.image,
                       size: 36,
                       color: accentColor,
                     ),
@@ -450,7 +450,7 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final fallback = ColoredBox(
       color: accentColor.withValues(alpha: 0.16),
-      child: Center(child: Icon(LucideIcons.userRound, color: accentColor)),
+      child: Center(child: AppIcon(AppIcons.userRound, color: accentColor)),
     );
     return SizedBox.square(
       dimension: size,

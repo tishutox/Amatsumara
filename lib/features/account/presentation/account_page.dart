@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:lumii_quest/features/account/data/account_repository.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
@@ -153,7 +153,7 @@ class _AccountPageState extends State<AccountPage> {
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(LucideIcons.trash),
+            icon: const AppIcon(AppIcons.trash),
             label: const Text('Delete account'),
           ),
         ],
@@ -201,7 +201,7 @@ class _AccountPageState extends State<AccountPage> {
         leading: IconButton(
           tooltip: 'Back',
           onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-          icon: const Icon(LucideIcons.chevronLeft),
+          icon: const AppIcon(AppIcons.chevronLeft),
         ),
         title: const Text('Account'),
       ),
@@ -292,7 +292,7 @@ class _AccountTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-          Icon(LucideIcons.chevronRight, color: accent, size: 20),
+          AppIcon(AppIcons.chevronRight, color: accent, size: 20),
         ],
       ),
       onTap: onTap,
@@ -460,8 +460,8 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
                 suffixIcon: IconButton(
                   tooltip: _obscure ? 'Show password' : 'Hide password',
                   onPressed: () => setState(() => _obscure = !_obscure),
-                  icon: Icon(
-                    _obscure ? LucideIcons.eye : LucideIcons.eyeOff,
+                  icon: AppIcon(
+                    _obscure ? AppIcons.eye : AppIcons.eyeOff,
                   ),
                 ),
               ),

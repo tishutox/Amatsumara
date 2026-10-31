@@ -36,8 +36,8 @@ enum FriendSortField {
 }
 
 enum FriendSortDirection {
-  ascending('A → Z'),
-  descending('Z → A');
+  ascending('A Ã¢â€ â€™ Z'),
+  descending('Z Ã¢â€ â€™ A');
 
   const FriendSortDirection(this.label);
 

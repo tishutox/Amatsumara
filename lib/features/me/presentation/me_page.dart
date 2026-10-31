@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final _usernamePattern = RegExp(r'^[A-Za-z0-9._-]+$');
@@ -121,7 +121,6 @@ class _MePageState extends State<MePage> {
       initialDate: _birthday ?? DateTime(now.year - 18, now.month, now.day),
       firstDate: DateTime(now.year - 120),
       lastDate: now,
-      switchToInputEntryModeIcon: const Icon(LucideIcons.pencil),
     );
 
     if (selected == null) {
@@ -230,7 +229,7 @@ class _MePageState extends State<MePage> {
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(context).pop(true),
-            icon: const Icon(LucideIcons.trash),
+            icon: const AppIcon(AppIcons.trash),
             label: const Text('Delete account'),
           ),
         ],
@@ -366,7 +365,7 @@ class _MePageState extends State<MePage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(LucideIcons.heart, size: 64, color: primary),
+              AppIcon(AppIcons.heart, size: 64, color: primary),
               const SizedBox(height: 16),
               Text(
                 'Lumii Quest',
@@ -389,13 +388,13 @@ class _MePageState extends State<MePage> {
               const SizedBox(height: 40),
               FilledButton.icon(
                 onPressed: () => _start(_AuthMode.signUp),
-                icon: const Icon(LucideIcons.userPlus),
+                icon: const AppIcon(AppIcons.userPlus),
                 label: const Text('Sign Up'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => _start(_AuthMode.signIn),
-                icon: const Icon(LucideIcons.logIn),
+                icon: const AppIcon(AppIcons.logIn),
                 label: const Text('Sign In'),
               ),
             ],
@@ -477,7 +476,7 @@ class _MePageState extends State<MePage> {
               IconButton(
                 tooltip: 'Back',
                 onPressed: _goBack,
-                icon: const Icon(LucideIcons.chevronLeft),
+                icon: const AppIcon(AppIcons.chevronLeft),
               ),
               const SizedBox(width: 4),
               Expanded(
@@ -543,14 +542,14 @@ class _MePageState extends State<MePage> {
                         : isLastStep
                         ? _submit
                         : _next,
-                    icon: Icon(
+                    icon: AppIcon(
                       _isSubmitting
-                          ? LucideIcons.hourglass
+                          ? AppIcons.hourglass
                           : isLastStep
                           ? (isSignUp
-                                ? LucideIcons.userPlus
-                                : LucideIcons.logIn)
-                          : LucideIcons.chevronRight,
+                                ? AppIcons.userPlus
+                                : AppIcons.logIn)
+                          : AppIcons.chevronRight,
                     ),
                     label: Text(
                       _isSubmitting
@@ -599,7 +598,7 @@ class _MePageState extends State<MePage> {
                   _AuthTextField(
                     controller: _firstNameController,
                     label: 'First name',
-                    icon: LucideIcons.idCard,
+                    icon: AppIcons.idCard,
                     maxLength: 30,
                     validator: (value) =>
                         _requiredMax(value, 'First name', 30),
@@ -607,7 +606,7 @@ class _MePageState extends State<MePage> {
                   _AuthTextField(
                     controller: _lastNameController,
                     label: 'Last name',
-                    icon: LucideIcons.idCard,
+                    icon: AppIcons.idCard,
                     maxLength: 30,
                     validator: (value) =>
                         _requiredMax(value, 'Last name', 30),
@@ -618,7 +617,7 @@ class _MePageState extends State<MePage> {
               _AuthTextField(
                 controller: _displayNameController,
                 label: 'Display name',
-                icon: LucideIcons.userRound,
+                icon: AppIcons.userRound,
                 maxLength: 20,
                 validator: (value) =>
                     _requiredMax(value, 'Display name', 20),
@@ -643,7 +642,7 @@ class _MePageState extends State<MePage> {
                 _AuthTextField(
                   controller: _usernameController,
                   label: 'Username',
-                  icon: LucideIcons.userRound,
+                  icon: AppIcons.userRound,
                   maxLength: 20,
                   validator: _usernameValidator,
                 ),
@@ -654,14 +653,14 @@ class _MePageState extends State<MePage> {
                   _AuthTextField(
                     controller: _emailController,
                     label: 'Email',
-                    icon: LucideIcons.mail,
+                    icon: AppIcons.mail,
                     keyboardType: TextInputType.emailAddress,
                     validator: _emailValidator,
                   ),
                   _AuthTextField(
                     controller: _passwordController,
                     label: 'Password',
-                    icon: LucideIcons.eyeClosed,
+                    icon: AppIcons.eyeClosed,
                     obscureText: true,
                     validator: _passwordValidator,
                   ),
@@ -688,17 +687,17 @@ class _MePageState extends State<MePage> {
                   _AuthTextField(
                     controller: _birthdayController,
                     label: 'Birthday',
-                    icon: LucideIcons.cakeSlice,
+                    icon: AppIcons.cakeSlice,
                     readOnly: true,
                     onTap: _pickBirthday,
                     validator: (value) => _required(value, 'Birthday'),
                   ),
                   DropdownButtonFormField<String>(
                     initialValue: _country,
-                    icon: const Icon(LucideIcons.chevronDown),
+                    icon: const AppIcon(AppIcons.chevronDown),
                     decoration: _fieldDecoration(
                       label: 'Country',
-                      icon: LucideIcons.earth,
+                      icon: AppIcons.earth,
                     ),
                     borderRadius: BorderRadius.circular(16),
                     items: _countries
@@ -787,19 +786,19 @@ class _SignedInProfile extends StatelessWidget {
                   const SizedBox(height: 24),
                   FilledButton.icon(
                     onPressed: onEdit,
-                    icon: const Icon(LucideIcons.pencilRuler),
+                    icon: const AppIcon(AppIcons.pencilRuler),
                     label: const Text('Edit Profile'),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: onFriends,
-                    icon: const Icon(LucideIcons.bookHeart),
+                    icon: const AppIcon(AppIcons.bookHeart),
                     label: const Text('Friends list'),
                   ),
                   const SizedBox(height: 10),
                   OutlinedButton.icon(
                     onPressed: onSignOut,
-                    icon: const Icon(LucideIcons.logOut),
+                    icon: const AppIcon(AppIcons.logOut),
                     label: const Text('Sign out'),
                   ),
                   const SizedBox(height: 10),
@@ -811,7 +810,7 @@ class _SignedInProfile extends StatelessWidget {
                       ),
                     ),
                     onPressed: onDeleteAccount,
-                    icon: const Icon(LucideIcons.trash),
+                    icon: const AppIcon(AppIcons.trash),
                     label: const Text('Delete account'),
                   ),
                 ],
@@ -936,12 +935,12 @@ class _ProfileImagePicker extends StatelessWidget {
         _CircularProfileImage(
           size: 80,
           imageProvider: imageBytes == null ? null : MemoryImage(imageBytes!),
-          fallback: Icon(LucideIcons.imageUp, color: primary, size: 30),
+          fallback: AppIcon(AppIcons.imageUp, color: primary, size: 30),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: onPressed,
-          icon: const Icon(LucideIcons.imageUp),
+          icon: const AppIcon(AppIcons.imageUp),
           label: Text(
             imageBytes == null
                 ? 'Select profile image'
@@ -1042,7 +1041,7 @@ class _AuthTextField extends StatefulWidget {
 
   final TextEditingController controller;
   final String label;
-  final IconData icon;
+  final String icon;
   final String? Function(String?) validator;
   final TextInputType? keyboardType;
   final int? maxLength;
@@ -1078,7 +1077,7 @@ class _AuthTextFieldState extends State<_AuthTextField> {
             ? IconButton(
                 tooltip: _isHidden ? 'Show password' : 'Hide password',
                 onPressed: () => setState(() => _isHidden = !_isHidden),
-                icon: Icon(_isHidden ? LucideIcons.eyeClosed : LucideIcons.eye),
+                icon: AppIcon(_isHidden ? AppIcons.eyeClosed : AppIcons.eye),
               )
             : null,
       ),
@@ -1089,12 +1088,12 @@ class _AuthTextFieldState extends State<_AuthTextField> {
 
 InputDecoration _fieldDecoration({
   required String label,
-  required IconData icon,
+  required String icon,
   Widget? prefix,
 }) {
   return InputDecoration(
     labelText: label,
-    prefixIcon: prefix ?? Icon(icon),
+    prefixIcon: prefix ?? AppIcon(icon),
     counterText: '',
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
   );

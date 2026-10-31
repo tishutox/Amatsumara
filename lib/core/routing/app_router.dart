@@ -38,6 +38,7 @@ final appRouter = GoRouter(
         displayName: state.uri.queryParameters['name'] ?? 'Call',
         incoming: state.uri.queryParameters['incoming'] == 'true',
         avatarUrl: state.uri.queryParameters['avatar'],
+        isVideoCall: state.uri.queryParameters['video'] == 'true',
       ),
     ),
     GoRoute(

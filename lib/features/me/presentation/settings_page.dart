@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:lumii_quest/features/profile/data/profile_repository.dart';
 import 'package:lumii_quest/features/profile/domain/user_profile.dart';
@@ -78,7 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
         title: const Text('Settings'),
         leading: IconButton(
           onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-          icon: const Icon(LucideIcons.chevronLeft),
+          icon: const AppIcon(AppIcons.chevronLeft),
         ),
       ),
       body: ListView(
@@ -94,12 +94,12 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 _SettingsLinkTile(
                   label: 'Account',
-                  icon: LucideIcons.circleUserRound,
+                  icon: AppIcons.circleUserRound,
                   onTap: () => context.push('/account'),
                 ),
                 const _SettingsLinkTile(
                   label: 'Data Privacy & Security',
-                  icon: LucideIcons.fingerprintPattern,
+                  icon: AppIcons.fingerprintPattern,
                 ),
               ],
             ),
@@ -110,15 +110,15 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'App Settings',
               children: [
                 _SettingsTile(
-                  icon: LucideIcons.languages,
+                  icon: AppIcons.languages,
                   label: 'Language & Region',
                 ),
-                _SettingsTile(icon: LucideIcons.bell, label: 'Notifications'),
+                _SettingsTile(icon: AppIcons.bell, label: 'Notifications'),
                 _SettingsTile(
-                  icon: LucideIcons.accessibility,
+                  icon: AppIcons.accessibility,
                   label: 'Accessibility',
                 ),
-                _SettingsTile(icon: LucideIcons.heart, label: 'Interests'),
+                _SettingsTile(icon: AppIcons.heart, label: 'Interests'),
               ],
             ),
           ),
@@ -128,11 +128,11 @@ class _SettingsPageState extends State<SettingsPage> {
               title: 'Support',
               children: [
                 _SettingsTile(
-                  icon: LucideIcons.lifeBuoy,
+                  icon: AppIcons.lifeBuoy,
                   label: 'Support Center',
                 ),
                 _SettingsTile(
-                  icon: LucideIcons.messageSquareText,
+                  icon: AppIcons.messageSquareText,
                   label: 'Share Feedback',
                 ),
               ],
@@ -145,7 +145,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: _signOut,
-                  icon: const Icon(LucideIcons.logOut),
+                  icon: const AppIcon(AppIcons.logOut),
                   label: const Text('Sign Out'),
                 ),
               ),
@@ -232,7 +232,7 @@ class _ProfileHeader extends StatelessWidget {
                       minWidth: 36,
                       minHeight: 36,
                     ),
-                    icon: Icon(LucideIcons.pencilRuler, color: primary),
+                    icon: AppIcon(AppIcons.pencilRuler, color: primary),
                   ),
                 ),
               ),
@@ -272,7 +272,7 @@ class _ProfileHeader extends StatelessWidget {
 
   Widget _banner(Color primary) {
     final placeholder = Center(
-      child: Icon(LucideIcons.image, size: 36, color: primary),
+      child: AppIcon(AppIcons.image, size: 36, color: primary),
     );
     return ColoredBox(
       color: primary.withValues(alpha: 0.16),
@@ -322,16 +322,16 @@ class _ProfileHeader extends StatelessWidget {
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile({required this.icon, required this.label});
 
-  final IconData icon;
+  final String icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     return ListTile(
-      leading: Icon(icon, color: primary),
+      leading: AppIcon(icon, color: primary),
       title: Text(label),
-      trailing: Icon(LucideIcons.chevronRight, color: primary),
+      trailing: AppIcon(AppIcons.chevronRight, color: primary),
     );
   }
 }
@@ -340,16 +340,16 @@ class _SettingsLinkTile extends StatelessWidget {
   const _SettingsLinkTile({required this.label, this.icon, this.onTap});
 
   final String label;
-  final IconData? icon;
+  final String? icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     return ListTile(
-      leading: icon == null ? null : Icon(icon, color: primary),
+      leading: icon == null ? null : AppIcon(icon!, color: primary),
       title: Text(label),
-      trailing: Icon(LucideIcons.chevronRight, color: primary),
+      trailing: AppIcon(AppIcons.chevronRight, color: primary),
       onTap: onTap,
     );
   }

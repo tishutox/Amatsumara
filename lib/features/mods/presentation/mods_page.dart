@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 
 class ModsPage extends StatelessWidget {
   const ModsPage({super.key});
@@ -12,7 +12,7 @@ class ModsPage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(LucideIcons.cpu, size: 56, color: primary),
+          AppIcon(AppIcons.cpu, size: 56, color: primary),
           const SizedBox(height: 16),
           Text(
             'Mods',

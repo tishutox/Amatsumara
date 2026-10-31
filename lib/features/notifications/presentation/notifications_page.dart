@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/features/notifications/data/notification_repository.dart';
 import 'package:lumii_quest/features/notifications/domain/notification_item.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 
 enum _FilterChoice { singleDate, dateRange, clear }
 
@@ -59,14 +59,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
           SimpleDialogOption(
             onPressed: () => context.pop(_FilterChoice.singleDate),
             child: const ListTile(
-              leading: Icon(LucideIcons.calendar),
+              leading: AppIcon(AppIcons.calendar),
               title: Text('Single date'),
             ),
           ),
           SimpleDialogOption(
             onPressed: () => context.pop(_FilterChoice.dateRange),
             child: const ListTile(
-              leading: Icon(LucideIcons.calendarRange),
+              leading: AppIcon(AppIcons.calendarRange),
               title: Text('Date range'),
             ),
           ),
@@ -74,7 +74,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             SimpleDialogOption(
               onPressed: () => context.pop(_FilterChoice.clear),
               child: const ListTile(
-                leading: Icon(LucideIcons.listX),
+                leading: AppIcon(AppIcons.listX),
                 title: Text('Clear filter'),
               ),
             ),
@@ -153,19 +153,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
       appBar: AppBar(
         leading: IconButton(
           onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-          icon: const Icon(LucideIcons.chevronLeft),
+          icon: const AppIcon(AppIcons.chevronLeft),
         ),
         title: const Text('Notifications'),
         actions: [
           IconButton(
             tooltip: 'Refresh',
             onPressed: _refresh,
-            icon: const Icon(LucideIcons.refreshCcw),
+            icon: const AppIcon(AppIcons.refreshCcw),
           ),
           IconButton(
             tooltip: 'Filter',
             onPressed: _chooseFilter,
-            icon: const Icon(LucideIcons.listFilter),
+            icon: const AppIcon(AppIcons.listFilter),
           ),
         ],
       ),
@@ -210,7 +210,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         ListTile(
-                          leading: const Icon(LucideIcons.bell),
+                          leading: const AppIcon(AppIcons.bell),
                           title: Text(
                             item.title,
                             style: TextStyle(
@@ -246,7 +246,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                       ? null
                                       : () => _respond(item, accept: true),
                                   child: Text(
-                                    isResponding ? 'Saving…' : 'Accept',
+                                    isResponding ? 'SavingÃ¢â‚¬Â¦' : 'Accept',
                                   ),
                                 ),
                               ],
@@ -284,8 +284,8 @@ class _RequestStatus extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          accepted ? LucideIcons.check : LucideIcons.x,
+        AppIcon(
+          accepted ? AppIcons.check : AppIcons.x,
           size: 18,
           color: accepted ? Colors.green : Theme.of(context).colorScheme.error,
         ),
@@ -308,7 +308,7 @@ class _NotificationMessage extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(LucideIcons.bell, size: 42),
+          const AppIcon(AppIcons.bell, size: 42),
           const SizedBox(height: 12),
           Text(message),
           if (onRetry != null) ...[

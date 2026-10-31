@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/responsive/content_layout.dart';
 import 'package:lumii_quest/features/chats/crypto/chat_crypto_service.dart';
 import 'package:lumii_quest/features/chats/data/chat_repository.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatsPage extends StatefulWidget {
@@ -68,7 +68,7 @@ class _ChatsPageState extends State<ChatsPage> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       return const _ChatEmptyState(
-        icon: LucideIcons.lock,
+        icon: AppIcons.lock,
         title: 'Sign in to chat',
         message: 'Your encrypted chats will appear here after you sign in.',
       );
@@ -87,12 +87,12 @@ class _ChatsPageState extends State<ChatsPage> {
               }
               if (snapshot.hasError) {
                 return _ChatEmptyState(
-                  icon: LucideIcons.triangleAlert,
+                  icon: AppIcons.triangleAlert,
                   title: 'Chats could not be loaded',
                   message: 'Please run the updated Supabase SQL and try again.',
                   action: TextButton.icon(
                     onPressed: _reload,
-                    icon: const Icon(LucideIcons.refreshCcw),
+                    icon: const AppIcon(AppIcons.refreshCcw),
                     label: const Text('Try again'),
                   ),
                 );
@@ -101,7 +101,7 @@ class _ChatsPageState extends State<ChatsPage> {
               final chats = snapshot.data ?? const [];
               if (chats.isEmpty) {
                 return const _ChatEmptyState(
-                  icon: LucideIcons.messageCircle,
+                  icon: AppIcons.messageCircle,
                   title: 'No chats yet',
                   message:
                       'When you become friends with someone, their private chat appears here.',
@@ -155,7 +155,7 @@ class _ChatTile extends StatelessWidget {
         ),
         title: Text(chat.displayName),
         subtitle: Text('@${chat.username}'),
-        trailing: Icon(LucideIcons.chevronRight, color: primary),
+        trailing: AppIcon(AppIcons.chevronRight, color: primary),
       ),
     );
   }
@@ -169,7 +169,7 @@ class _ChatEmptyState extends StatelessWidget {
     this.action,
   });
 
-  final IconData icon;
+  final String icon;
   final String title;
   final String message;
   final Widget? action;
@@ -186,7 +186,7 @@ class _ChatEmptyState extends StatelessWidget {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  Icon(icon, size: 42, color: primary),
+                  AppIcon(icon, size: 42, color: primary),
                   const SizedBox(height: 12),
                   Text(
                     title,
