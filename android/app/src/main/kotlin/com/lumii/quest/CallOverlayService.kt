@@ -38,18 +38,26 @@ class CallOverlayService : Service() {
         private const val NOTIFICATION_ID = 2001
 
         fun show(context: Context, avatarUrl: String, name: String) {
-            val intent = Intent(context, CallOverlayService::class.java)
-            intent.putExtra("avatarUrl", avatarUrl)
-            intent.putExtra("name", name)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                val intent = Intent(context, CallOverlayService::class.java)
+                intent.putExtra("avatarUrl", avatarUrl)
+                intent.putExtra("name", name)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                // Ignore; never crash the app because of the overlay.
             }
         }
 
         fun hide(context: Context) {
-            context.stopService(Intent(context, CallOverlayService::class.java))
+            try {
+                context.stopService(Intent(context, CallOverlayService::class.java))
+            } catch (e: Exception) {
+                // Ignore.
+            }
         }
     }
 
@@ -66,13 +74,20 @@ class CallOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val avatarUrl = intent?.getStringExtra("avatarUrl") ?: ""
-        val name = intent?.getStringExtra("name") ?: "Lumii Call"
-
-        startAsForeground(name)
-        createOverlay(avatarUrl)
-
-        return START_NOT_STICKY
+        return try {
+            val avatarUrl = intent?.getStringExtra("avatarUrl") ?: ""
+            val name = intent?.getStringExtra("name") ?: "Lumii Call"
+            startAsForeground(name)
+            createOverlay(avatarUrl)
+            START_NOT_STICKY
+        } catch (e: Exception) {
+            // Never crash the app because of the overlay.
+            try {
+                stopSelf()
+            } catch (_: Exception) {
+            }
+            START_NOT_STICKY
+        }
     }
 
     private fun startAsForeground(name: String) {
