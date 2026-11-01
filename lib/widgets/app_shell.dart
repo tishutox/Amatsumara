@@ -81,11 +81,20 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _onIncomingCall(Map<String, dynamic> payload) {
-    if (payload['kind'] != 'ring' || !mounted) {
+    if (!mounted) {
       return;
     }
     final from = payload['from'] as String?;
     if (from == null || from.isEmpty) {
+      return;
+    }
+    if (payload['kind'] == 'cancel') {
+      if (_incomingCall?.callerId == from) {
+        setState(() => _incomingCall = null);
+      }
+      return;
+    }
+    if (payload['kind'] != 'ring') {
       return;
     }
     final name = payload['name'] as String? ?? 'Lumii user';
@@ -119,15 +128,26 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _declineIncomingCall() {
+  Future<void> _declineIncomingCall() async {
     final call = _incomingCall;
     if (call == null) return;
     setState(() => _incomingCall = null);
     final selfId = Supabase.instance.client.auth.currentUser?.id ?? '';
     final sessionId = CallSignaling.sessionChannel(selfId, call.callerId);
-    final session = CallSignaling().joinSession(sessionId, (_) {});
-    unawaited(session.send({'kind': 'decline', 'from': selfId}));
-    session.dispose();
+    try {
+      final session = await CallSignaling().joinSession(sessionId, (_) {});
+      try {
+        await session.send({'kind': 'decline', 'from': selfId});
+      } finally {
+        session.dispose();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not decline the call: $error')),
+        );
+      }
+    }
   }
 
   @override
@@ -264,7 +284,7 @@ class _AppShellState extends State<AppShell> {
               name: _incomingCall!.name,
               avatarUrl: _incomingCall!.avatarUrl,
               onAccept: _acceptIncomingCall,
-              onDecline: _declineIncomingCall,
+              onDecline: () => unawaited(_declineIncomingCall()),
             ),
           Expanded(
             child: Row(

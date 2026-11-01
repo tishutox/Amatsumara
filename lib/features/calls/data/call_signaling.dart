@@ -52,33 +52,57 @@ class CallSignaling {
       'video': isVideoCall,
     };
 
-    // Subscribe over WebSocket first so the ring is delivered reliably to the
-    // peer's live subscription, falling back to REST only if that fails.
-    final ready = Completer<void>();
-    channel.subscribe((status, [error]) {
-      if (!ready.isCompleted) {
-        ready.complete();
-      }
-    });
-    try {
-      await ready.future.timeout(const Duration(seconds: 6));
-      await channel.sendBroadcastMessage(event: 'call', payload: payload);
-    } catch (_) {
-      await channel.sendBroadcastMessage(event: 'call', payload: payload);
-    } finally {
-      await channel.unsubscribe();
-    }
+    await channel.httpSend(event: 'call', payload: payload);
+  }
+
+  Future<void> sendCancel({required String peerUserId}) async {
+    final channel = _client.channel(personalChannel(peerUserId));
+    await channel.httpSend(
+      event: 'call',
+      payload: {'kind': 'cancel', 'from': _selfId},
+    );
   }
 
   /// Joins the session channel used for the call exchange.
-  CallSession joinSession(
+  Future<CallSession> joinSession(
     String sessionId,
     void Function(Map<String, dynamic> payload) onMessage,
-  ) {
-    final channel = _client.channel(sessionId);
+  ) async {
+    final channel = _client.channel(
+      sessionId,
+      opts: const RealtimeChannelConfig(ack: true),
+    );
     channel.onBroadcast(event: 'call', callback: onMessage);
-    channel.subscribe();
-    return CallSession._(channel);
+    final ready = Completer<void>();
+    channel.subscribe((status, error) {
+      if (ready.isCompleted) {
+        return;
+      }
+      switch (status) {
+        case RealtimeSubscribeStatus.subscribed:
+          ready.complete();
+          return;
+        case RealtimeSubscribeStatus.channelError:
+        case RealtimeSubscribeStatus.closed:
+        case RealtimeSubscribeStatus.timedOut:
+          ready.completeError(
+            StateError('Could not join call signaling channel: $error'),
+          );
+          return;
+      }
+    });
+
+    try {
+      await ready.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () =>
+            throw TimeoutException('Timed out joining call signaling channel.'),
+      );
+      return CallSession._(channel);
+    } catch (_) {
+      await channel.unsubscribe();
+      rethrow;
+    }
   }
 }
 
@@ -87,11 +111,17 @@ class CallSession {
 
   final RealtimeChannel _channel;
 
-  Future<void> send(Map<String, dynamic> payload) {
-    return _channel.sendBroadcastMessage(event: 'call', payload: payload);
+  Future<void> send(Map<String, dynamic> payload) async {
+    final response = await _channel.sendBroadcastMessage(
+      event: 'call',
+      payload: payload,
+    );
+    if (response != ChannelResponse.ok) {
+      throw StateError('Call signaling message was not delivered: $response');
+    }
   }
 
   void dispose() {
-    _channel.unsubscribe();
+    unawaited(_channel.unsubscribe());
   }
 }

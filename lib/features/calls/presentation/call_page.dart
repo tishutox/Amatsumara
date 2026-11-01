@@ -10,15 +10,7 @@ import 'package:lumii_quest/features/chats/data/chat_repository.dart';
 import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum _CallPhase {
-  idle,
-  calling,
-  ringing,
-  connecting,
-  connected,
-  ended,
-  error,
-}
+enum _CallPhase { idle, calling, ringing, connecting, connected, ended, error }
 
 class CallPage extends StatefulWidget {
   const CallPage({
@@ -54,11 +46,13 @@ class _CallPageState extends State<CallPage> {
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   CallSession? _session;
   bool _muted = false;
-  bool _headphonesOff = false;
   bool _speakerOn = false;
   bool _videoOn = false;
   bool _overlayShown = false;
+  bool _isEnding = false;
   bool _remoteDescriptionSet = false;
+  Timer? _ringTimeout;
+  Future<void>? _cleanupFuture;
   final List<Map<String, dynamic>> _pendingIceCandidates = [];
 
   static const _overlayChannel = MethodChannel('lumii/call_overlay');
@@ -95,12 +89,7 @@ class _CallPageState extends State<CallPage> {
         await _startOutgoing();
       }
     } catch (error) {
-      if (mounted) {
-        setState(() {
-          _phase = _CallPhase.error;
-          _statusMessage = 'Call failed: $error';
-        });
-      }
+      await _fail('Call failed: $error');
     }
   }
 
@@ -110,22 +99,39 @@ class _CallPageState extends State<CallPage> {
       _phase = _CallPhase.calling;
       _statusMessage = 'Calling...';
     });
-    _session = _signaling.joinSession(_sessionId, _onMessage);
+    final metadata =
+        Supabase.instance.client.auth.currentUser?.userMetadata ?? {};
+    final avatar = metadata['avatar_url'];
+    _session = await _signaling.joinSession(_sessionId, _onMessage);
     await _signaling.sendRing(
       peerUserId: widget.friendId,
       callerName: _myDisplayName(),
+      callerAvatarUrl: avatar is String ? avatar : null,
       isVideoCall: widget.isVideoCall,
     );
+    if (_phase == _CallPhase.calling) {
+      _ringTimeout = Timer(
+        const Duration(seconds: 45),
+        () => unawaited(_finish('No answer.')),
+      );
+    }
   }
 
   String _myDisplayName() {
-    final value =
-        Supabase.instance.client.auth.currentUser?.userMetadata?['display_name'];
+    final value = Supabase
+        .instance
+        .client
+        .auth
+        .currentUser
+        ?.userMetadata?['display_name'];
     return value is String && value.isNotEmpty ? value : 'Lumii user';
   }
 
   void _onMessage(Map<String, dynamic> payload) {
     final type = payload['kind'] as String?;
+    if (type == 'ready') {
+      _ringTimeout?.cancel();
+    }
     switch (type) {
       case 'ready':
         unawaited(_onReady());
@@ -144,6 +150,9 @@ class _CallPageState extends State<CallPage> {
 
   Future<void> _onReady() async {
     try {
+      if (_pc != null) {
+        return;
+      }
       await _setupPeerConnection();
       final offer = await _pc!.createOffer();
       await _pc!.setLocalDescription(offer);
@@ -159,7 +168,7 @@ class _CallPageState extends State<CallPage> {
         });
       }
     } catch (error) {
-      _fail('Call setup failed: $error');
+      await _fail('Call setup failed: $error');
     }
   }
 
@@ -188,7 +197,7 @@ class _CallPageState extends State<CallPage> {
         });
       }
     } catch (error) {
-      _fail('Call setup failed: $error');
+      await _fail('Call setup failed: $error');
     }
   }
 
@@ -201,7 +210,7 @@ class _CallPageState extends State<CallPage> {
       _remoteDescriptionSet = true;
       await _flushPendingIce();
     } catch (error) {
-      _fail('Call setup failed: $error');
+      await _fail('Call setup failed: $error');
     }
   }
 
@@ -216,24 +225,24 @@ class _CallPageState extends State<CallPage> {
       _pendingIceCandidates.add(candidate);
       return;
     }
-    await _addIceCandidate(pc, candidate);
+    try {
+      await _addIceCandidate(pc, candidate);
+    } catch (error) {
+      await _fail('Could not establish the call connection: $error');
+    }
   }
 
   Future<void> _addIceCandidate(
     RTCPeerConnection pc,
     Map<String, dynamic> candidate,
   ) async {
-    try {
-      await pc.addCandidate(
-        RTCIceCandidate(
-          candidate['candidate'] as String?,
-          candidate['sdpMid'] as String?,
-          candidate['sdpMLineIndex'] as int?,
-        ),
-      );
-    } catch (_) {
-      // ICE failures are non-fatal and can be ignored.
-    }
+    await pc.addCandidate(
+      RTCIceCandidate(
+        candidate['candidate'] as String?,
+        candidate['sdpMid'] as String?,
+        candidate['sdpMLineIndex'] as int?,
+      ),
+    );
   }
 
   Future<void> _flushPendingIce() async {
@@ -250,6 +259,9 @@ class _CallPageState extends State<CallPage> {
 
   Future<void> _setupPeerConnection() async {
     _remoteDescriptionSet = false;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      await Helper.ensureAudioSession();
+    }
     _pc = await createPeerConnection({
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
@@ -265,20 +277,7 @@ class _CallPageState extends State<CallPage> {
       ],
     });
 
-    _pc!.onIceCandidate = (candidate) {
-      if (candidate.candidate == null) {
-        return;
-      }
-      _session?.send({
-        'kind': 'ice',
-        'from': _selfId,
-        'candidate': {
-          'candidate': candidate.candidate,
-          'sdpMid': candidate.sdpMid,
-          'sdpMLineIndex': candidate.sdpMLineIndex,
-        },
-      });
-    };
+    _pc!.onIceCandidate = (candidate) => unawaited(_sendIce(candidate));
 
     _pc!.onTrack = (event) {
       if (event.streams.isNotEmpty) {
@@ -298,8 +297,7 @@ class _CallPageState extends State<CallPage> {
       } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
-        if (_phase == _CallPhase.connected ||
-            _phase == _CallPhase.connecting) {
+        if (_phase == _CallPhase.connected || _phase == _CallPhase.connecting) {
           unawaited(_finish('Call ended.'));
         }
       }
@@ -307,16 +305,43 @@ class _CallPageState extends State<CallPage> {
 
     final stream = await navigator.mediaDevices.getUserMedia({
       'audio': true,
-      'video': widget.isVideoCall,
+      'video': widget.isVideoCall
+          ? {
+              'facingMode': 'user',
+              'width': {'ideal': 1280},
+              'height': {'ideal': 720},
+            }
+          : false,
     });
+    _localStream = stream;
+    _localRenderer.srcObject = stream;
     for (final track in stream.getTracks()) {
       if (track.kind == 'audio') {
         track.enabled = !_muted;
+      } else if (track.kind == 'video') {
+        track.enabled = _videoOn;
       }
       await _pc!.addTrack(track, stream);
     }
-    _localStream = stream;
-    _localRenderer.srcObject = stream;
+  }
+
+  Future<void> _sendIce(RTCIceCandidate candidate) async {
+    if (candidate.candidate == null || _isEnding) {
+      return;
+    }
+    try {
+      await _session?.send({
+        'kind': 'ice',
+        'from': _selfId,
+        'candidate': {
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        },
+      });
+    } catch (error) {
+      await _fail('Could not send call connection data: $error');
+    }
   }
 
   Future<void> _accept() async {
@@ -325,16 +350,24 @@ class _CallPageState extends State<CallPage> {
       _phase = _CallPhase.connecting;
       _statusMessage = 'Connecting...';
     });
-    _session = _signaling.joinSession(_sessionId, _onMessage);
-    await _session!.send({'kind': 'ready', 'from': _selfId});
+    try {
+      _session = await _signaling.joinSession(_sessionId, _onMessage);
+      await _session!.send({'kind': 'ready', 'from': _selfId});
+    } catch (error) {
+      await _fail('Could not accept the call: $error');
+    }
   }
 
   Future<void> _decline() async {
-    final session = _signaling.joinSession(_sessionId, _onMessage);
+    CallSession? session;
     try {
+      session = await _signaling.joinSession(_sessionId, _onMessage);
       await session.send({'kind': 'decline', 'from': _selfId});
+    } catch (error) {
+      await _fail('Could not decline the call: $error');
+      return;
     } finally {
-      session.dispose();
+      session?.dispose();
     }
     await _finish('Call declined.');
   }
@@ -355,10 +388,26 @@ class _CallPageState extends State<CallPage> {
         _statusMessage = message;
       });
     }
+    try {
+      await _session?.send({'kind': 'hangup', 'from': _selfId});
+    } catch (_) {
+      // The original failure is more useful than a follow-up signaling error.
+    }
     await _cleanup();
   }
 
   Future<void> _finish(String message) async {
+    if (_isEnding) {
+      return;
+    }
+    _isEnding = true;
+    if (_phase == _CallPhase.calling) {
+      try {
+        await _signaling.sendCancel(peerUserId: widget.friendId);
+      } catch (_) {
+        // The local call still ends if the remote banner cannot be dismissed.
+      }
+    }
     await _cleanup();
     if (mounted) {
       setState(() {
@@ -375,7 +424,11 @@ class _CallPageState extends State<CallPage> {
     }
   }
 
-  Future<void> _cleanup() async {
+  Future<void> _cleanup() => _cleanupFuture ??= _performCleanup();
+
+  Future<void> _performCleanup() async {
+    _ringTimeout?.cancel();
+    _ringTimeout = null;
     await _hideCallOverlay();
 
     final session = _session;
@@ -409,28 +462,79 @@ class _CallPageState extends State<CallPage> {
 
   Future<void> _toggleVideo() async {
     final localStream = _localStream;
-    if (localStream == null) {
-      return;
-    }
     final newState = !_videoOn;
-    for (final track in localStream.getVideoTracks()) {
-      track.enabled = newState;
+    if (localStream != null) {
+      for (final track in localStream.getVideoTracks()) {
+        track.enabled = newState;
+      }
     }
-    setState(() => _videoOn = newState);
+    if (mounted) {
+      setState(() => _videoOn = newState);
+    }
   }
 
-  Future<void> _toggleHeadphones() async {
-    setState(() => _headphonesOff = !_headphonesOff);
-    _remoteRenderer.muted = _headphonesOff;
+  Future<void> _chooseAudioOutput() async {
+    if (_localStream == null) {
+      return;
+    }
+    try {
+      final devices = await Helper.audiooutputs;
+      if (!mounted) {
+        return;
+      }
+      if (devices.isEmpty) {
+        _showCallMessage('No audio output devices were found.');
+        return;
+      }
+      final deviceId = await showModalBottomSheet<String>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final device in devices)
+                ListTile(
+                  leading: const AppIcon(AppIcons.headphones),
+                  title: Text(
+                    device.label.isEmpty ? 'Audio device' : device.label,
+                  ),
+                  onTap: () => Navigator.of(context).pop(device.deviceId),
+                ),
+            ],
+          ),
+        ),
+      );
+      if (deviceId == null || !mounted) {
+        return;
+      }
+      final selected = await _remoteRenderer.audioOutput(deviceId);
+      if (!selected) {
+        throw StateError('The selected audio output could not be activated.');
+      }
+    } catch (error) {
+      _showCallMessage('Could not change audio output: $error');
+    }
   }
 
   Future<void> _toggleSpeaker() async {
-    setState(() => _speakerOn = !_speakerOn);
     try {
-      await Helper.setSpeakerphoneOn(_speakerOn);
-    } catch (_) {
-      // Speakerphone is Android-only; other platforms are a no-op.
+      final speakerOn = !_speakerOn;
+      await Helper.setSpeakerphoneOn(speakerOn);
+      if (mounted) {
+        setState(() => _speakerOn = speakerOn);
+      }
+    } catch (error) {
+      _showCallMessage('Could not change speaker: $error');
     }
+  }
+
+  void _showCallMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _showCallOverlay() async {
@@ -471,10 +575,16 @@ class _CallPageState extends State<CallPage> {
 
   @override
   void dispose() {
-    unawaited(_cleanup());
-    unawaited(_remoteRenderer.dispose());
-    unawaited(_localRenderer.dispose());
+    _isEnding = true;
+    _ringTimeout?.cancel();
+    unawaited(_disposeCall());
     super.dispose();
+  }
+
+  Future<void> _disposeCall() async {
+    await _cleanup();
+    await _remoteRenderer.dispose();
+    await _localRenderer.dispose();
   }
 
   @override
@@ -498,7 +608,7 @@ class _CallPageState extends State<CallPage> {
         child: Stack(
           children: [
             Positioned.fill(
-              child: _videoOn
+              child: widget.isVideoCall
                   ? RTCVideoView(
                       _remoteRenderer,
                       objectFit:
@@ -506,7 +616,7 @@ class _CallPageState extends State<CallPage> {
                     )
                   : _buildProfileHeader(primary),
             ),
-            if (_videoOn)
+            if (widget.isVideoCall && _videoOn)
               Positioned(
                 top: 12,
                 right: 12,
@@ -519,7 +629,32 @@ class _CallPageState extends State<CallPage> {
                   ),
                 ),
               ),
-            if (!_videoOn)
+            if (widget.isVideoCall &&
+                _phase != _CallPhase.connected &&
+                _phase != _CallPhase.ended)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 32),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _statusMessage,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (!widget.isVideoCall)
               Opacity(
                 opacity: 0,
                 child: SizedBox(
@@ -555,7 +690,10 @@ class _CallPageState extends State<CallPage> {
               ? Text(
                   widget.displayName.trim().isEmpty
                       ? '?'
-                      : widget.displayName.trim().characters.first
+                      : widget.displayName
+                            .trim()
+                            .characters
+                            .first
                             .toUpperCase(),
                   style: TextStyle(fontSize: 44, color: primary),
                 )
@@ -609,11 +747,14 @@ class _CallPageState extends State<CallPage> {
           showVideo: widget.isVideoCall,
           videoOn: _videoOn,
           muted: _muted,
-          headphonesOff: _headphonesOff,
           speakerOn: _speakerOn,
+          showSpeaker:
+              !kIsWeb &&
+              (defaultTargetPlatform == TargetPlatform.android ||
+                  defaultTargetPlatform == TargetPlatform.iOS),
           onToggleVideo: _toggleVideo,
           onToggleMute: _toggleMute,
-          onToggleHeadphones: _toggleHeadphones,
+          onChooseAudioOutput: _chooseAudioOutput,
           onToggleSpeaker: _toggleSpeaker,
           onHangup: _hangup,
         );
@@ -626,11 +767,11 @@ class _CallControlsBar extends StatelessWidget {
     required this.showVideo,
     required this.videoOn,
     required this.muted,
-    required this.headphonesOff,
     required this.speakerOn,
+    required this.showSpeaker,
     required this.onToggleVideo,
     required this.onToggleMute,
-    required this.onToggleHeadphones,
+    required this.onChooseAudioOutput,
     required this.onToggleSpeaker,
     required this.onHangup,
   });
@@ -638,11 +779,11 @@ class _CallControlsBar extends StatelessWidget {
   final bool showVideo;
   final bool videoOn;
   final bool muted;
-  final bool headphonesOff;
   final bool speakerOn;
+  final bool showSpeaker;
   final VoidCallback onToggleVideo;
   final VoidCallback onToggleMute;
-  final VoidCallback onToggleHeadphones;
+  final VoidCallback onChooseAudioOutput;
   final VoidCallback onToggleSpeaker;
   final VoidCallback onHangup;
 
@@ -674,21 +815,19 @@ class _CallControlsBar extends StatelessWidget {
             onTap: onToggleMute,
           ),
           _CircleControl(
-            tooltip: headphonesOff ? 'Headphones on' : 'Headphones off',
-            icon: headphonesOff
-                ? AppIcons.headphoneOff
-                : AppIcons.headphones,
-            active: headphonesOff,
+            tooltip: 'Choose audio output',
+            icon: AppIcons.headphones,
             size: 46,
-            onTap: onToggleHeadphones,
+            onTap: onChooseAudioOutput,
           ),
-          _CircleControl(
-            tooltip: speakerOn ? 'Speaker off' : 'Speaker on',
-            icon: speakerOn ? AppIcons.volumeOff : AppIcons.volume2,
-            active: speakerOn,
-            size: 46,
-            onTap: onToggleSpeaker,
-          ),
+          if (showSpeaker)
+            _CircleControl(
+              tooltip: speakerOn ? 'Speaker off' : 'Speaker on',
+              icon: speakerOn ? AppIcons.volumeOff : AppIcons.volume2,
+              active: speakerOn,
+              size: 46,
+              onTap: onToggleSpeaker,
+            ),
           _CircleControl(
             tooltip: 'End call',
             icon: AppIcons.phone,
@@ -749,9 +888,7 @@ class _CircleControl extends StatelessWidget {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: active
-                  ? Border.all(color: activeColor, width: 2)
-                  : null,
+              border: active ? Border.all(color: activeColor, width: 2) : null,
             ),
             child: Center(child: iconWidget),
           ),

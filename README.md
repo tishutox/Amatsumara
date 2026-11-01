@@ -59,6 +59,13 @@ For the private notifications inbox and friend requests, run
 `supabase/notifications.sql` in the Supabase SQL Editor. Run the complete file
 again whenever it changes; the migration preserves existing notifications.
 
+Voice and video calls use Supabase Realtime for signaling and WebRTC for media.
+Keep Realtime enabled in the Supabase project. Calls request microphone access;
+video calls also request camera access. On web, serve the app from HTTPS or
+localhost so the browser can grant media-device access. Audio output follows
+the system's connected headset by default; the in-call audio-device control
+lets users select another available output.
+
 ## Run By Platform
 
 ```bash

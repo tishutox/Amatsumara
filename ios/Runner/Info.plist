@@ -37,6 +37,10 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Lumii Quest uses your photo library when you choose a profile image.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Lumii Quest uses your camera for video calls.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lumii Quest uses your microphone for voice and video calls.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
