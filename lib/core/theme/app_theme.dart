@@ -26,6 +26,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'LINESeedJP',
       brightness: Brightness.light,
       shadowColor: Colors.transparent,
       colorScheme: colorScheme,
