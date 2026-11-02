@@ -29,14 +29,19 @@ class FernMessage {
   );
 }
 
-/// Local-only chat store for Fern, backed by the Ollama cloud API.
+/// Local-only chat store for Fern.
 ///
 /// Messages are persisted in [SharedPreferences] on the device only — never in
 /// the database — so logging out or uninstalling the app discards the history.
+///
+/// Replies come from Ollama when `OLLAMA_API_KEY` is set (higher quality) and
+/// otherwise from Pollinations.ai, a free, keyless public endpoint so the
+/// chatbot works for everyone without any secret in the app.
 class FernRepository {
   static const _storageKey = 'fern_messages_v1';
   static const _model = 'glm-5.3-flash';
   static const _chatUrl = 'https://ollama.com/api/chat';
+  static const _pollinationsUrl = 'https://text.pollinations.ai/';
   static const _apiKey = String.fromEnvironment('OLLAMA_API_KEY');
 
   Future<List<FernMessage>> loadMessages() async {
@@ -68,23 +73,23 @@ class FernRepository {
     await prefs.remove(_storageKey);
   }
 
-  /// Sends [userMessage] to Ollama and returns the assistant reply.
+  /// Sends [userMessage] to the assistant and returns the reply.
   Future<String> sendMessage(
     List<FernMessage> history,
     String userMessage,
   ) async {
-    if (_apiKey.isEmpty) {
-      throw StateError(
-        'OLLAMA_API_KEY is not set. Pass it at build time with '
-        '--dart-define=OLLAMA_API_KEY=...',
-      );
-    }
-
     final messages = [
       ...history.map((m) => {'role': m.role, 'content': m.content}),
       {'role': 'user', 'content': userMessage},
     ];
 
+    if (_apiKey.isNotEmpty) {
+      return _sendToOllama(messages);
+    }
+    return _sendToPollinations(messages);
+  }
+
+  Future<String> _sendToOllama(List<Map<String, String>> messages) async {
     final response = await http.post(
       Uri.parse(_chatUrl),
       headers: {
@@ -99,13 +104,30 @@ class FernRepository {
     );
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'Ollama error ${response.statusCode}: ${response.body}',
-      );
+      throw Exception('Ollama error ${response.statusCode}: ${response.body}');
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final message = data['message'] as Map<String, dynamic>;
     return message['content'] as String? ?? '';
+  }
+
+  Future<String> _sendToPollinations(List<Map<String, String>> messages) async {
+    final response = await http.post(
+      Uri.parse(_pollinationsUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'messages': messages,
+        'model': 'openai',
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Pollinations error ${response.statusCode}: ${response.body}',
+      );
+    }
+
+    return response.body.trim();
   }
 }
