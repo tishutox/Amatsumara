@@ -10,6 +10,7 @@ abstract final class AppIcons {
   static const bell = 'bell';
   static const bolt = 'bolt';
   static const bookHeart = 'book-heart';
+  static const bot = 'bot';
   static const cakeSlice = 'cake-slice';
   static const calendar = 'calendar';
   static const calendarRange = 'calendar-range';

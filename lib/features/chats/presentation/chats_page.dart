@@ -66,59 +66,99 @@ class _ChatsPageState extends State<ChatsPage> {
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) {
-      return const _ChatEmptyState(
-        icon: AppIcons.lock,
-        title: 'Sign in to chat',
-        message: 'Your encrypted chats will appear here after you sign in.',
-      );
-    }
 
     return RefreshIndicator(
       onRefresh: _refresh,
       child: ListView(
         padding: ContentLayout.pagePadding,
         children: [
-          FutureBuilder<List<ChatPreview>>(
-            future: _chatsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return _ChatEmptyState(
-                  icon: AppIcons.triangleAlert,
-                  title: 'Chats could not be loaded',
-                  message: 'Please run the updated Supabase SQL and try again.',
-                  action: TextButton.icon(
-                    onPressed: _reload,
-                    icon: const AppIcon(AppIcons.refreshCcw),
-                    label: const Text('Try again'),
-                  ),
-                );
-              }
+          ContentLayout.widthBox(child: const _FernTile()),
+          ContentLayout.sectionGap,
+          if (user == null)
+            const _ChatEmptyState(
+              icon: AppIcons.lock,
+              title: 'Sign in to chat',
+              message:
+                  'Your encrypted chats will appear here after you sign in.',
+            )
+          else
+            FutureBuilder<List<ChatPreview>>(
+              future: _chatsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return _ChatEmptyState(
+                    icon: AppIcons.triangleAlert,
+                    title: 'Chats could not be loaded',
+                    message:
+                        'Please run the updated Supabase SQL and try again.',
+                    action: TextButton.icon(
+                      onPressed: _reload,
+                      icon: const AppIcon(AppIcons.refreshCcw),
+                      label: const Text('Try again'),
+                    ),
+                  );
+                }
 
-              final chats = snapshot.data ?? const [];
-              if (chats.isEmpty) {
-                return const _ChatEmptyState(
-                  icon: AppIcons.messageCircle,
-                  title: 'No chats yet',
-                  message:
-                      'When you become friends with someone, their private chat appears here.',
-                );
-              }
+                final chats = snapshot.data ?? const [];
+                if (chats.isEmpty) {
+                  return const _ChatEmptyState(
+                    icon: AppIcons.messageCircle,
+                    title: 'No chats yet',
+                    message:
+                        'When you become friends with someone, their private chat appears here.',
+                  );
+                }
 
-              return Column(
-                children: [
-                  for (final chat in chats) ...[
-                    ContentLayout.widthBox(child: _ChatTile(chat: chat)),
-                    ContentLayout.sectionGap,
+                return Column(
+                  children: [
+                    for (final chat in chats) ...[
+                      ContentLayout.widthBox(child: _ChatTile(chat: chat)),
+                      ContentLayout.sectionGap,
+                    ],
                   ],
-                ],
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
+      ),
+    );
+  }
+}
+
+class _FernTile extends StatelessWidget {
+  const _FernTile();
+
+  static const _lilac = Color(0xFF8B5CF6);
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Card(
+      child: ListTile(
+        onTap: () => context.push('/fern'),
+        leading: const CircleAvatar(
+          backgroundImage: AssetImage('fern/fern.png'),
+        ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Fern'),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _lilac.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const AppIcon(AppIcons.bot, size: 14, color: _lilac),
+            ),
+          ],
+        ),
+        subtitle: const Text('Local AI assistant'),
+        trailing: AppIcon(AppIcons.chevronRight, color: primary),
       ),
     );
   }
@@ -177,33 +217,28 @@ class _ChatEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
-    return ListView(
-      padding: ContentLayout.pagePadding,
-      children: [
-        ContentLayout.widthBox(
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  AppIcon(icon, size: 42, color: primary),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(message, textAlign: TextAlign.center),
-                  if (action != null) ...[const SizedBox(height: 12), action!],
-                ],
+    return ContentLayout.widthBox(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              AppIcon(icon, size: 42, color: primary),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              Text(message, textAlign: TextAlign.center),
+              if (action != null) ...[const SizedBox(height: 12), action!],
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

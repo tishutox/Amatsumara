@@ -4,6 +4,7 @@ export 'package:lumii_quest/core/routing/profile_links.dart';
 import 'package:lumii_quest/features/account/presentation/account_page.dart';
 import 'package:lumii_quest/features/calls/presentation/call_page.dart';
 import 'package:lumii_quest/features/chats/presentation/chat_detail_page.dart';
+import 'package:lumii_quest/features/fern/presentation/fern_page.dart';
 import 'package:lumii_quest/features/me/presentation/settings_page.dart';
 import 'package:lumii_quest/features/notifications/presentation/notifications_page.dart';
 import 'package:lumii_quest/features/friends/presentation/friends_page.dart';
@@ -23,6 +24,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/account', builder: (_, _) => const AccountPage()),
     GoRoute(path: '/edit-profile', builder: (_, _) => const EditProfilePage()),
     GoRoute(path: '/friends', builder: (_, _) => const FriendsPage()),
+    GoRoute(path: '/fern', builder: (_, _) => const FernPage()),
     GoRoute(
       path: '/chats/:conversationId',
       builder: (_, state) => ChatDetailPage(
