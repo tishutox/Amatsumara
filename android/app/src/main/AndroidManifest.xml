@@ -45,7 +45,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https"
                       android:host="tishutox.github.io"
-                      android:pathPrefix="/Lumii/app/u/"/>
+                      android:pathPrefix="/Amatsumara/app/u/"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>

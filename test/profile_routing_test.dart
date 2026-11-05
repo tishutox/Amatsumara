@@ -4,7 +4,7 @@ import 'package:lumii_quest/core/routing/app_router.dart';
 void main() {
   test('maps the public web profile URL to an app route', () {
     final location = profileLocationFromUri(
-      Uri.parse('https://tishutox.github.io/Lumii/app/u/Alice'),
+      Uri.parse('https://tishutox.github.io/Amatsumara/app/u/Alice'),
     );
 
     expect(location, '/u/Alice');
@@ -26,7 +26,7 @@ void main() {
   test('maps a legacy public profile URL to an app route', () {
     expect(
       profileLocationFromUri(
-        Uri.parse('https://tishutox.github.io/Lumii/app/Alice'),
+        Uri.parse('https://tishutox.github.io/Amatsumara/app/Alice'),
       ),
       '/u/Alice',
     );

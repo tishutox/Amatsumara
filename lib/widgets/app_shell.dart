@@ -176,7 +176,7 @@ class _AppShellState extends State<AppShell> {
 
   Future<void> _copyProfileLink() async {
     await Clipboard.setData(
-      ClipboardData(text: 'https://tishutox.github.io/Lumii/app/u/$_username'),
+      ClipboardData(text: 'https://tishutox.github.io/Amatsumara/app/u/$_username'),
     );
     if (mounted) {
       ScaffoldMessenger.of(

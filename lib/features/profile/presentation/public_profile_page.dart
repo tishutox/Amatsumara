@@ -206,7 +206,7 @@ class _PublicProfilePageState extends State<PublicProfilePage> {
       tooltip: 'Copy profile link',
       onPressed: () async {
         final link =
-            'https://tishutox.github.io/Lumii/app/u/${widget.username}';
+            'https://tishutox.github.io/Amatsumara/app/u/${widget.username}';
         await Clipboard.setData(ClipboardData(text: link));
         if (mounted) _showMessage('Profile link copied.');
       },
