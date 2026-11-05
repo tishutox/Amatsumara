@@ -39,7 +39,7 @@ class FernMessage {
 /// chatbot works for everyone without any secret in the app.
 class FernRepository {
   static const _storageKey = 'fern_messages_v1';
-  static const _model = 'glm-5.3-flash';
+  static const _model = 'dolphin3';
   static const _chatUrl = 'https://ollama.com/api/chat';
   static const _pollinationsUrl = 'https://text.pollinations.ai/';
   static const _apiKey = String.fromEnvironment('OLLAMA_API_KEY');
@@ -140,7 +140,7 @@ class FernRepository {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'messages': messages,
-        'model': 'openai',
+        'model': 'gpt-oss-20b',
       }),
     );
 
