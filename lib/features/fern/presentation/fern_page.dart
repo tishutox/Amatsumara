@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:lumii_quest/features/fern/data/fern_repository.dart';
+import 'package:lumii_quest/features/fern/data/local_llm_service.dart';
 
 const Color fernLilac = Color(0xFF8B5CF6);
 
@@ -24,11 +25,15 @@ class _FernPageState extends State<FernPage> {
   final _scrollController = ScrollController();
   List<FernMessage> _messages = [];
   bool _sending = false;
+  bool _downloadingModel = false;
+  double? _downloadProgress;
+  bool _localModelReady = false;
 
   @override
   void initState() {
     super.initState();
     unawaited(_load());
+    unawaited(_checkLocalModel());
   }
 
   @override
@@ -51,6 +56,40 @@ class _FernPageState extends State<FernPage> {
       if (!_scrollController.hasClients) return;
       _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
     });
+  }
+
+  Future<void> _checkLocalModel() async {
+    final ready = LocalLlmService.instance.isModelLoaded;
+    if (mounted) setState(() => _localModelReady = ready);
+  }
+
+  Future<void> _downloadModel() async {
+    if (_downloadingModel) return;
+    setState(() {
+      _downloadingModel = true;
+      _downloadProgress = 0;
+    });
+    try {
+      final ok = await LocalLlmService.instance.ensureLoaded(
+        onProgress: (p) {
+          if (mounted) setState(() => _downloadProgress = p);
+        },
+      );
+      if (mounted) setState(() => _localModelReady = ok);
+      if (mounted && !ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load the local model.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Model download failed: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _downloadingModel = false);
+    }
   }
 
   Future<void> _send() async {
@@ -135,6 +174,8 @@ class _FernPageState extends State<FernPage> {
         top: false,
         child: Column(
           children: [
+            if (LocalLlmService.instance.isSupported && !_localModelReady)
+              _buildLocalModelBanner(),
             Expanded(
               child: _messages.isEmpty
                   ? _buildEmptyState()
@@ -151,6 +192,61 @@ class _FernPageState extends State<FernPage> {
                     ),
             ),
             _buildInputBar(primary, surface),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocalModelBanner() {
+    final progress = _downloadProgress;
+    return Material(
+      color: fernLilac.withValues(alpha: 0.08),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const AppIcon(AppIcons.bot, size: 18, color: fernLilac),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _downloadingModel
+                        ? 'Downloading local AI model…'
+                        : 'Run Fern on this device (no cloud)',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (_downloadingModel)
+                  Text(
+                    progress == null
+                        ? ''
+                        : '${(progress * 100).toStringAsFixed(0)}%',
+                    style: const TextStyle(fontSize: 13),
+                  )
+                else
+                  TextButton(
+                    onPressed: _downloadModel,
+                    child: const Text('Download'),
+                  ),
+              ],
+            ),
+            if (_downloadingModel && progress != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 4,
+                  backgroundColor: fernLilac.withValues(alpha: 0.15),
+                  valueColor: const AlwaysStoppedAnimation<Color>(fernLilac),
+                ),
+              ),
           ],
         ),
       ),

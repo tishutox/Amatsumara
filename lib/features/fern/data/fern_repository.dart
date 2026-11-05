@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'local_llm_service.dart';
+
 /// A single message in the local Fern (AI assistant) conversation.
 class FernMessage {
   const FernMessage({
@@ -39,7 +41,7 @@ class FernMessage {
 /// chatbot works for everyone without any secret in the app.
 class FernRepository {
   static const _storageKey = 'fern_messages_v1';
-  static const _model = 'dolphin3';
+  static const _model = 'glm-5.3-flash:cloud';
   static const _chatUrl = 'https://ollama.com/api/chat';
   static const _pollinationsUrl = 'https://text.pollinations.ai/';
   static const _apiKey = String.fromEnvironment('OLLAMA_API_KEY');
@@ -105,10 +107,17 @@ class FernRepository {
       {'role': 'user', 'content': userMessage},
     ];
 
+    if (LocalLlmService.instance.isModelLoaded) {
+      return _sendLocal(messages);
+    }
     if (_apiKey.isNotEmpty) {
       return _sendToOllama(messages);
     }
     return _sendToPollinations(messages);
+  }
+
+  Future<String> _sendLocal(List<Map<String, String>> messages) async {
+    return LocalLlmService.instance.chat(messages);
   }
 
   Future<String> _sendToOllama(List<Map<String, String>> messages) async {

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.60+61
+version: 1.0.61+62
 
 environment:
   sdk: ^3.12.2
@@ -52,6 +52,7 @@ dependencies:
   gal: ^2.3.0
   flutter_webrtc: ^1.6.3
   flutter_overlay_window: ^1.0.2
+  flutter_llama: ^1.2.1
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +64,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+# Vendored flutter_llama with Vulkan disabled (the upstream Android build's
+# Vulkan shader-gen step fails on Windows; we only need CPU inference).
+dependency_overrides:
+  flutter_llama:
+    path: third_party/flutter_llama
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
