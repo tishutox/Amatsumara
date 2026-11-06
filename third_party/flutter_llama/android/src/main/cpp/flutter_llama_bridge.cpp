@@ -13,7 +13,9 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <cstdint>
 #include <dlfcn.h>
+#include <unwind.h>
 
 #define LOG_TAG "FlutterLlamaBridge"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -32,9 +34,24 @@ static bool g_should_stop = false;
 static std::vector<std::string> g_stream_tokens;
 static size_t g_stream_pos = 0;
 
-// Native crash logger: writes the signal, faulting library and a raw backtrace
-// to a file so a native crash (SIGSEGV etc.) can be diagnosed after the fact.
+// Native crash logger: writes the signal, faulting library and a backtrace
+// to a file so a native crash (SIGSEGV/SIGABRT etc.) can be diagnosed.
 static char g_crash_log_path[512] = {0};
+
+struct BacktraceState {
+    void** current;
+    void** end;
+};
+
+static _Unwind_Reason_Code backtrace_callback(struct _Unwind_Context* ctx, void* arg) {
+    BacktraceState* state = (BacktraceState*)arg;
+    uintptr_t pc = _Unwind_GetIP(ctx);
+    if (pc) {
+        if (state->current == state->end) return _URC_END_OF_STACK;
+        *state->current++ = (void*)pc;
+    }
+    return _URC_NO_REASON;
+}
 
 static void crash_signal_handler(int sig, siginfo_t* info, void* /*ctx*/) {
     FILE* f = fopen(g_crash_log_path, "a");
@@ -42,14 +59,24 @@ static void crash_signal_handler(int sig, siginfo_t* info, void* /*ctx*/) {
         fprintf(f, "=== Native crash: signal %d ===\n", sig);
         if (info && info->si_addr) {
             fprintf(f, "Fault address: %p\n", info->si_addr);
+        }
+        fprintf(f, "Backtrace:\n");
+        void* frames[64];
+        BacktraceState state = { frames, frames + 64 };
+        _Unwind_Backtrace(backtrace_callback, &state);
+        int n = (int)(state.current - frames);
+        for (int i = 0; i < n; i++) {
             Dl_info dl;
-            if (dladdr(info->si_addr, &dl)) {
-                if (dl.dli_fname) fprintf(f, "Library: %s\n", dl.dli_fname);
-                if (dl.dli_sname) fprintf(f, "Symbol: %s\n", dl.dli_sname);
+            if (dladdr(frames[i], &dl) && dl.dli_fname) {
+                fprintf(f, "#%02d %s", i, dl.dli_fname);
+                if (dl.dli_sname) fprintf(f, " (%s)", dl.dli_sname);
                 if (dl.dli_fbase) {
-                    fprintf(f, "Offset: %p\n",
-                            (void*)((char*)info->si_addr - (char*)dl.dli_fbase));
+                    fprintf(f, " +0x%lx",
+                            (unsigned long)((char*)frames[i] - (char*)dl.dli_fbase));
                 }
+                fprintf(f, "\n");
+            } else {
+                fprintf(f, "#%02d %p\n", i, frames[i]);
             }
         }
         fflush(f);
