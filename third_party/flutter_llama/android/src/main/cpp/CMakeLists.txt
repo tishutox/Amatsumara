@@ -24,7 +24,7 @@ find_library(android-lib android)
 # llama.cpp: the checkout next to the package (git / development), else the same pinned commit as src/core (a pub.dev
 # install, where llama.cpp/ is not in the archive; sdd-flutter-llama-agent 4.3).
 set(LLAMA_CPP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../llama.cpp")
-set(FL_LLAMA_CPP_COMMIT 945501f5ea4b8ca56b181ecb035e9ee3fb31f432)
+set(FL_LLAMA_CPP_COMMIT cd959bae99ff4bed22bef2604f45241c09bbb8c8)
 if(NOT EXISTS "${LLAMA_CPP_DIR}/CMakeLists.txt")
     include(FetchContent)
     FetchContent_Declare(llama_cpp GIT_REPOSITORY https://github.com/ggml-org/llama.cpp.git GIT_TAG ${FL_LLAMA_CPP_COMMIT})
