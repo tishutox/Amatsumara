@@ -92,8 +92,8 @@ class LocalLlmService {
         modelPath: file.path,
         nThreads: 4,
         nGpuLayers: 0, // CPU-only for broad device compatibility
-        contextSize: 1024,
-        batchSize: 256,
+        contextSize: 2048,
+        batchSize: 2048, // must be >= the full prompt (system + history) or llama.cpp aborts
         useGpu: false,
         verbose: false,
       ),
