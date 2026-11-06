@@ -13,12 +13,13 @@ class LocalLlmService {
   LocalLlmService._();
   static final LocalLlmService instance = LocalLlmService._();
 
-  /// 3B abliterated GGUF (~1.8 GB). Refusal behavior is removed so the model
-  /// can handle adult roleplay; public and ungated. Swap this for another GGUF
-  /// URL to use a different model.
+  /// 3B GGUF (~1.9 GB). Hermes-3 is steerable/uncensored (good for adult
+  /// roleplay); public and ungated. Swap this for another GGUF URL to use a
+  /// different model.
   static const String modelUrl =
-      'https://huggingface.co/mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF/resolve/main/Qwen2.5-3B-Instruct-abliterated.Q4_K_M.gguf';
-  static const String _modelFileName = 'fern_model.gguf';
+      'https://huggingface.co/bartowski/Hermes-3-Llama-3.2-3B-GGUF/resolve/main/Hermes-3-Llama-3.2-3B-Q4_K_M.gguf';
+  static const String _modelFileName = 'fern_model_v2.gguf';
+  static const String _legacyModelFileName = 'fern_model.gguf';
 
   FlutterLlama get _llama => FlutterLlama.instance;
 
@@ -73,6 +74,16 @@ class LocalLlmService {
   Future<bool> ensureLoaded({void Function(double progress)? onProgress}) async {
     if (isModelLoaded) return true;
     final file = await modelFile();
+    // Free space from the previous model when the model was switched.
+    if (!file.existsSync()) {
+      final dir = await getApplicationDocumentsDirectory();
+      final legacy = File('${dir.path}/$_legacyModelFileName');
+      if (legacy.existsSync()) {
+        try {
+          await legacy.delete();
+        } catch (_) {}
+      }
+    }
     if (!file.existsSync()) {
       await downloadModel(onProgress: onProgress);
     }
@@ -92,12 +103,12 @@ class LocalLlmService {
   /// Runs a chat completion with the loaded model.
   ///
   /// Uses the 1.1 `generate` path (the 1.2 chat engine needs native `core.*`
-  /// methods the Android plugin does not implement) and applies the Qwen2.5
+  /// methods the Android plugin does not implement) and applies the Llama-3.2
   /// chat template manually.
   Future<String> chat(List<Map<String, String>> messages) async {
     final response = await _llama.generate(
       GenerationParams(
-        prompt: _renderQwen25Prompt(messages),
+        prompt: _renderLlama32Prompt(messages),
         temperature: 0.8,
         topP: 0.95,
         topK: 40,
@@ -108,14 +119,14 @@ class LocalLlmService {
     return response.text.trim();
   }
 
-  String _renderQwen25Prompt(List<Map<String, String>> messages) {
-    final buffer = StringBuffer();
+  String _renderLlama32Prompt(List<Map<String, String>> messages) {
+    final buffer = StringBuffer('<|begin_of_text|>');
     for (final m in messages) {
       final role = m['role'] ?? 'user';
       final content = m['content'] ?? '';
-      buffer.write('<|im_start|>$role\n$content<|im_end|>\n');
+      buffer.write('<|start_header_id|>$role<|end_header_id|>\n\n$content<|eot_id|>');
     }
-    buffer.write('<|im_start|>assistant\n');
+    buffer.write('<|start_header_id|>assistant<|end_header_id|>\n\n');
     return buffer.toString();
   }
 }
