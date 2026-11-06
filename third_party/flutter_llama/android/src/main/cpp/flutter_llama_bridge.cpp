@@ -10,6 +10,10 @@
 #include <vector>
 #include <mutex>
 #include <android/log.h>
+#include <csignal>
+#include <cstdio>
+#include <cstring>
+#include <dlfcn.h>
 
 #define LOG_TAG "FlutterLlamaBridge"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -28,6 +32,33 @@ static bool g_should_stop = false;
 static std::vector<std::string> g_stream_tokens;
 static size_t g_stream_pos = 0;
 
+// Native crash logger: writes the signal, faulting library and a raw backtrace
+// to a file so a native crash (SIGSEGV etc.) can be diagnosed after the fact.
+static char g_crash_log_path[512] = {0};
+
+static void crash_signal_handler(int sig, siginfo_t* info, void* /*ctx*/) {
+    FILE* f = fopen(g_crash_log_path, "a");
+    if (f) {
+        fprintf(f, "=== Native crash: signal %d ===\n", sig);
+        if (info && info->si_addr) {
+            fprintf(f, "Fault address: %p\n", info->si_addr);
+            Dl_info dl;
+            if (dladdr(info->si_addr, &dl)) {
+                if (dl.dli_fname) fprintf(f, "Library: %s\n", dl.dli_fname);
+                if (dl.dli_sname) fprintf(f, "Symbol: %s\n", dl.dli_sname);
+                if (dl.dli_fbase) {
+                    fprintf(f, "Offset: %p\n",
+                            (void*)((char*)info->si_addr - (char*)dl.dli_fbase));
+                }
+            }
+        }
+        fflush(f);
+        fclose(f);
+    }
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
 extern "C" {
 
 // The registered compute devices, e.g. "CPU;Vulkan0 (Mali-G57)" (sdd-flutter-llama-agent 1.2).
@@ -40,6 +71,26 @@ Java_net_nativemind_flutter_1llama_FlutterLlamaPlugin_nativeBackendInfo(JNIEnv* 
         out += std::string(ggml_backend_dev_name(dev)) + " (" + ggml_backend_dev_description(dev) + ")";
     }
     return env->NewStringUTF(out.c_str());
+}
+
+// Install the native crash logger so a SIGSEGV/etc. is written to [logPath].
+JNIEXPORT void JNICALL
+Java_net_nativemind_flutter_1llama_FlutterLlamaPlugin_nativeInstallCrashLogger(
+    JNIEnv* env, jobject /* thiz */, jstring logPath) {
+    const char* path = env->GetStringUTFChars(logPath, nullptr);
+    strncpy(g_crash_log_path, path, sizeof(g_crash_log_path) - 1);
+    g_crash_log_path[sizeof(g_crash_log_path) - 1] = '\0';
+    env->ReleaseStringUTFChars(logPath, path);
+
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_sigaction = crash_signal_handler;
+    sa.sa_flags = SA_SIGINFO;
+    sigaction(SIGSEGV, &sa, nullptr);
+    sigaction(SIGABRT, &sa, nullptr);
+    sigaction(SIGBUS, &sa, nullptr);
+    sigaction(SIGFPE, &sa, nullptr);
+    sigaction(SIGILL, &sa, nullptr);
 }
 
 // Initialize and load model

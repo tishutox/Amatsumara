@@ -59,7 +59,15 @@ class FlutterLlamaPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
         
         eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, EVENT_CHANNEL_NAME)
         eventChannel.setStreamHandler(this)
-        
+
+        try {
+            val crashLog = File(flutterPluginBinding.applicationContext.filesDir, "crash.log")
+            nativeInstallCrashLogger(crashLog.absolutePath)
+            Log.d(TAG, "Native crash logger installed: ${crashLog.absolutePath}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to install crash logger: ${e.message}")
+        }
+
         Log.d(TAG, "Plugin attached to engine")
     }
 
@@ -330,6 +338,8 @@ class FlutterLlamaPlugin : FlutterPlugin, MethodCallHandler, EventChannel.Stream
     // MARK: - Native Methods (JNI)
 
     private external fun nativeBackendInfo(): String
+
+    private external fun nativeInstallCrashLogger(logPath: String)
 
     private external fun nativeInitModel(
         modelPath: String,

@@ -129,4 +129,16 @@ class LocalLlmService {
     buffer.write('<|start_header_id|>assistant<|end_header_id|>\n\n');
     return buffer.toString();
   }
+
+  /// Returns the native crash log (if any) written by the native crash handler.
+  Future<String?> readCrashLog() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.path}/crash.log');
+      if (!file.existsSync()) return null;
+      return await file.readAsString();
+    } catch (_) {
+      return null;
+    }
+  }
 }

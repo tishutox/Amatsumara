@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:lumii_quest/features/fern/data/fern_repository.dart';
@@ -34,6 +35,7 @@ class _FernPageState extends State<FernPage> {
     super.initState();
     unawaited(_load());
     unawaited(_checkLocalModel());
+    unawaited(_checkCrashLog());
   }
 
   @override
@@ -61,6 +63,36 @@ class _FernPageState extends State<FernPage> {
   Future<void> _checkLocalModel() async {
     final ready = LocalLlmService.instance.isModelLoaded;
     if (mounted) setState(() => _localModelReady = ready);
+  }
+
+  Future<void> _checkCrashLog() async {
+    final log = await LocalLlmService.instance.readCrashLog();
+    if (!mounted || log == null || log.trim().isEmpty) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Native crash log'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: SelectableText(log, style: const TextStyle(fontSize: 12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: log));
+              Navigator.of(context).pop();
+            },
+            child: const Text('Copy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _downloadModel() async {
