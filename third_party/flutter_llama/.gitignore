@@ -1,0 +1,7 @@
+# Build artifacts of the vendored flutter_llama plugin (regenerated on each build)
+.android/
+.gradle/
+build/
+.cxx/
+.dart_tool/
+.flutter-plugins-dependencies

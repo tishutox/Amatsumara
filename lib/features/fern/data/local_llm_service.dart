@@ -81,9 +81,9 @@ class LocalLlmService {
         modelPath: file.path,
         nThreads: 4,
         nGpuLayers: 0, // CPU-only for broad device compatibility
-        contextSize: 2048,
-        batchSize: 512,
-        useGpu: true,
+        contextSize: 1024,
+        batchSize: 256,
+        useGpu: false,
         verbose: false,
       ),
     );
@@ -101,7 +101,7 @@ class LocalLlmService {
         temperature: 0.8,
         topP: 0.95,
         topK: 40,
-        maxTokens: 512,
+        maxTokens: 256,
         repeatPenalty: 1.1,
       ),
     );
