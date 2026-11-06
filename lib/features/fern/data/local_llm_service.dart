@@ -89,19 +89,15 @@ class LocalLlmService {
     );
   }
 
-  /// Runs a chat completion with the loaded model, using the model's own chat
-  /// template (system/user/assistant roles are applied automatically).
+  /// Runs a chat completion with the loaded model.
+  ///
+  /// Uses the 1.1 `generate` path (the 1.2 chat engine needs native `core.*`
+  /// methods the Android plugin does not implement) and applies the Qwen2.5
+  /// chat template manually.
   Future<String> chat(List<Map<String, String>> messages) async {
-    final result = await _llama.chat(
-      [
-        for (final m in messages)
-          switch (m['role']) {
-            'system' => LlamaMessage.system(m['content'] ?? ''),
-            'assistant' => LlamaMessage.assistant(m['content'] ?? ''),
-            _ => LlamaMessage.user(m['content'] ?? ''),
-          },
-      ],
-      const ChatParams(
+    final response = await _llama.generate(
+      GenerationParams(
+        prompt: _renderQwen25Prompt(messages),
         temperature: 0.8,
         topP: 0.95,
         topK: 40,
@@ -109,6 +105,17 @@ class LocalLlmService {
         repeatPenalty: 1.1,
       ),
     );
-    return result.text.trim();
+    return response.text.trim();
+  }
+
+  String _renderQwen25Prompt(List<Map<String, String>> messages) {
+    final buffer = StringBuffer();
+    for (final m in messages) {
+      final role = m['role'] ?? 'user';
+      final content = m['content'] ?? '';
+      buffer.write('<|im_start|>$role\n$content<|im_end|>\n');
+    }
+    buffer.write('<|im_start|>assistant\n');
+    return buffer.toString();
   }
 }
