@@ -11,16 +11,33 @@ class FernMessage {
     required this.role,
     required this.content,
     required this.sentAt,
+    this.kind = 'text',
+    this.mediaPath,
+    this.mediaDuration,
   });
 
   final String role; // 'user' or 'assistant'
   final String content;
   final DateTime sentAt;
 
+  /// 'text', 'image', or 'audio'.
+  final String kind;
+
+  /// Local file path for 'image' and 'audio' kinds.
+  final String? mediaPath;
+
+  /// Playback duration in seconds for 'audio' kind.
+  final double? mediaDuration;
+
+  bool get isMedia => kind != 'text';
+
   Map<String, dynamic> toJson() => {
     'role': role,
     'content': content,
     'sentAt': sentAt.toIso8601String(),
+    'kind': kind,
+    'mediaPath': mediaPath,
+    'mediaDuration': mediaDuration,
   };
 
   factory FernMessage.fromJson(Map<String, dynamic> json) => FernMessage(
@@ -28,6 +45,9 @@ class FernMessage {
     content: json['content'] as String? ?? '',
     sentAt:
         DateTime.tryParse(json['sentAt'] as String? ?? '') ?? DateTime.now(),
+    kind: json['kind'] as String? ?? 'text',
+    mediaPath: json['mediaPath'] as String?,
+    mediaDuration: (json['mediaDuration'] as num?)?.toDouble(),
   );
 }
 
@@ -92,7 +112,9 @@ class FernRepository {
   ) async {
     final messages = [
       {'role': 'system', 'content': _systemPrompt},
-      ...history.map((m) => {'role': m.role, 'content': m.content}),
+      ...history
+          .where((m) => !m.isMedia)
+          .map((m) => {'role': m.role, 'content': m.content}),
       {'role': 'user', 'content': userMessage},
     ];
 
