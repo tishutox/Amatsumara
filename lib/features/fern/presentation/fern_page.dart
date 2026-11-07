@@ -51,6 +51,7 @@ class _FernPageState extends State<FernPage> {
     AppIcons.faceAngry,
   ];
   String _emojiIcon = AppIcons.faceSlightlySmiling;
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _inputAreaKey = GlobalKey();
   double _inputAreaHeight = 0;
 
@@ -99,6 +100,11 @@ class _FernPageState extends State<FernPage> {
     if (box.size.height != _inputAreaHeight) {
       setState(() => _inputAreaHeight = box.size.height);
     }
+  }
+
+  void _openDrawerRoute(String location) {
+    _scaffoldKey.currentState?.closeDrawer();
+    context.push(location);
   }
 
   void _handleTextChanged() {
@@ -407,33 +413,33 @@ class _FernPageState extends State<FernPage> {
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureInputArea());
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         leading: IconButton(
-          tooltip: 'Back',
-          onPressed: () => context.pop(),
-          icon: const AppIcon(AppIcons.chevronLeft),
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 16,
-              backgroundImage: AssetImage('fern/fern.png'),
-            ),
-            const SizedBox(width: 8),
-            const Text('Fern'),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: fernLilac.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const AppIcon(AppIcons.bot, size: 16, color: fernLilac),
-            ),
-          ],
+          tooltip: 'Menu',
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          icon: const AppIcon(AppIcons.equal),
         ),
         surfaceTintColor: Colors.transparent,
+      ),
+      drawer: Drawer(
+        child: SafeArea(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              ListTile(
+                leading: const AppIcon(AppIcons.bolt),
+                title: const Text('Settings'),
+                onTap: () => _openDrawerRoute('/settings'),
+              ),
+              ListTile(
+                leading: const AppIcon(AppIcons.pencilRuler),
+                title: const Text('Edit profile'),
+                onTap: () => _openDrawerRoute('/edit-profile'),
+              ),
+            ],
+          ),
+        ),
       ),
       body: Stack(
         clipBehavior: Clip.none,

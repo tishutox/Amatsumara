@@ -24,6 +24,7 @@ abstract final class AppIcons {
   static const cpu = 'cpu';
   static const download = 'download';
   static const earth = 'earth';
+  static const equal = 'equal';
   static const eye = 'eye';
   static const eyeClosed = 'eye-closed';
   static const eyeOff = 'eye-closed';

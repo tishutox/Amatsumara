@@ -1,6 +1,5 @@
 import 'package:lumii_quest/app/app.dart';
 import 'package:lumii_quest/core/routing/url_strategy.dart';
-import 'package:lumii_quest/core/routing/protocol_registration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -32,7 +31,6 @@ Future<void> _configureOrientation() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   configureUrlStrategy();
-  registerAppProtocol();
   if (_supabaseUrl.isEmpty || _supabasePublishableKey.isEmpty) {
     throw StateError(
       'Supabase configuration is missing. Start Flutter with '
