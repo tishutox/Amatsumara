@@ -45,8 +45,6 @@ class _FernPageState extends State<FernPage> {
   late List<FernMessage> _messages;
   bool _sending = false;
   bool _downloadingModel = false;
-  double? _downloadProgress;
-  bool _localModelReady = false;
   bool _isRecording = false;
   bool _showAttachMenu = false;
   final List<double> _amplitudes = [];
@@ -65,7 +63,6 @@ class _FernPageState extends State<FernPage> {
     super.initState();
     _messages = List.of(widget.conversation.messages);
     _controller.addListener(_handleTextChanged);
-    unawaited(_checkLocalModel());
     unawaited(_checkCrashLog());
   }
 
@@ -113,11 +110,6 @@ class _FernPageState extends State<FernPage> {
     );
   }
 
-  Future<void> _checkLocalModel() async {
-    final ready = LocalLlmService.instance.isModelLoaded;
-    if (mounted) setState(() => _localModelReady = ready);
-  }
-
   Future<void> _checkCrashLog() async {
     final log = await LocalLlmService.instance.readCrashLog();
     if (!mounted || log == null || log.trim().isEmpty) return;
@@ -148,21 +140,22 @@ class _FernPageState extends State<FernPage> {
     );
   }
 
-  Future<void> _downloadModel() async {
+  Future<void> _toggleLocalModel() async {
+    final service = LocalLlmService.instance;
+    if (service.useLocal) {
+      // Switch back to the (SFW) cloud model.
+      setState(() => service.useLocal = false);
+      return;
+    }
     if (_downloadingModel) return;
-    setState(() {
-      _downloadingModel = true;
-      _downloadProgress = 0;
-    });
+    setState(() => _downloadingModel = true);
     try {
-      final ok = await LocalLlmService.instance.ensureLoaded(
-        onProgress: (p) {
-          if (mounted) setState(() => _downloadProgress = p);
-        },
-      );
-      if (mounted) setState(() => _localModelReady = ok);
-      if (mounted && !ok) {
-        _showSnack('Could not load the local model.');
+      final ok = await service.ensureLoaded();
+      if (mounted) {
+        setState(() {
+          if (ok) service.useLocal = true;
+        });
+        if (!ok) _showSnack('Could not load the local model.');
       }
     } catch (error) {
       if (mounted) {
@@ -478,6 +471,32 @@ class _FernPageState extends State<FernPage> {
         ),
         actions: [
           IconButton(
+            tooltip: LocalLlmService.instance.useLocal
+                ? 'Deactivate NSFW (cloud)'
+                : 'Activate NSFW (local)',
+            onPressed: _toggleLocalModel,
+            style: LocalLlmService.instance.useLocal
+                ? IconButton.styleFrom(
+                    backgroundColor: fernLilac.withValues(alpha: 0.18),
+                  )
+                : null,
+            icon: _downloadingModel
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: fernLilac,
+                    ),
+                  )
+                : AppIcon(
+                    LocalLlmService.instance.useLocal
+                        ? AppIcons.ban
+                        : AppIcons.arrowBigDownDash,
+                    color: LocalLlmService.instance.useLocal ? fernLilac : null,
+                  ),
+          ),
+          IconButton(
             tooltip: 'New chat',
             onPressed: widget.onNewChat,
             icon: const AppIcon(AppIcons.messageCirclePlus),
@@ -490,8 +509,6 @@ class _FernPageState extends State<FernPage> {
         children: [
           Column(
             children: [
-              if (LocalLlmService.instance.isSupported && !_localModelReady)
-                _buildLocalModelBanner(),
               Expanded(
                 child: _messages.isEmpty
                     ? _buildEmptyState()
@@ -553,61 +570,6 @@ class _FernPageState extends State<FernPage> {
       controller: _controller,
       isSending: _sending,
       onSend: _send,
-    );
-  }
-
-  Widget _buildLocalModelBanner() {
-    final progress = _downloadProgress;
-    return Material(
-      color: fernLilac.withValues(alpha: 0.08),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const AppIcon(AppIcons.bot, size: 18, color: fernLilac),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _downloadingModel
-                        ? 'Downloading local AI model…'
-                        : 'Run Fern on this device (no cloud)',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                if (_downloadingModel)
-                  Text(
-                    progress == null
-                        ? ''
-                        : '${(progress * 100).toStringAsFixed(0)}%',
-                    style: const TextStyle(fontSize: 13),
-                  )
-                else
-                  TextButton(
-                    onPressed: _downloadModel,
-                    child: const Text('Download'),
-                  ),
-              ],
-            ),
-            if (_downloadingModel && progress != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 4,
-                  backgroundColor: fernLilac.withValues(alpha: 0.15),
-                  valueColor: const AlwaysStoppedAnimation<Color>(fernLilac),
-                ),
-              ),
-          ],
-        ),
-      ),
     );
   }
 

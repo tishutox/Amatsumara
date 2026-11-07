@@ -29,6 +29,10 @@ class LocalLlmService {
   /// Whether a model is currently loaded into memory.
   bool get isModelLoaded => _llama.isModelLoaded;
 
+  /// Whether Fern currently uses the on-device (NSFW) model instead of the
+  /// (SFW) cloud fallback. Toggled from the chat app bar.
+  bool useLocal = false;
+
   Future<File> modelFile() async {
     final dir = await getApplicationDocumentsDirectory();
     return File('${dir.path}/$_modelFileName');

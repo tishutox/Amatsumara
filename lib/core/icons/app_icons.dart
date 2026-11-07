@@ -7,6 +7,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 /// `AppIcon` renders the matching asset.
 abstract final class AppIcons {
   static const accessibility = 'accessibility';
+  static const arrowBigDownDash = 'arrow-big-down-dash';
+  static const ban = 'ban';
   static const bell = 'bell';
   static const bolt = 'bolt';
   static const bookHeart = 'book-heart';
