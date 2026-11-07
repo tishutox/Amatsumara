@@ -217,10 +217,11 @@ class FernRepository {
       },
     ];
     try {
+      // Titles go through the cloud, not the local model: the on-device model
+      // is CPU-only and a second generate() right after a reply can abort
+      // llama.cpp (ggml_abort in llama_decode, signal 6).
       final String title;
-      if (LocalLlmService.instance.isModelLoaded) {
-        title = await _sendLocal(messages);
-      } else if (_apiKey.isNotEmpty) {
+      if (_apiKey.isNotEmpty) {
         title = await _sendToOllama(messages);
       } else {
         title = await _sendToPollinations(messages);
@@ -244,11 +245,16 @@ class FernRepository {
     List<FernMessage> history,
     String userMessage,
   ) async {
+    // Bound the prompt so it never exceeds the local model's batch/context
+    // window: an oversized batch aborts llama.cpp with ggml_abort in
+    // llama_decode (signal 6 native crash).
+    final textHistory = history.where((m) => !m.isMedia).toList();
+    final recent = textHistory.length > 16
+        ? textHistory.sublist(textHistory.length - 16)
+        : textHistory;
     final messages = [
       {'role': 'system', 'content': _systemPrompt},
-      ...history
-          .where((m) => !m.isMedia)
-          .map((m) => {'role': m.role, 'content': m.content}),
+      ...recent.map((m) => {'role': m.role, 'content': m.content}),
       {'role': 'user', 'content': userMessage},
     ];
 
