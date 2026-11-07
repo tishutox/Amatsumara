@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:lumii_quest/features/fern/data/fern_repository.dart';
@@ -52,15 +52,6 @@ class _FernPageState extends State<FernPage> {
   final List<double> _amplitudes = [];
   StreamSubscription<Amplitude>? _amplitudeSub;
   DateTime? _recordingStartedAt;
-  final Random _random = Random();
-  static const List<String> _emojiFaces = [
-    AppIcons.faceSlightlySmiling,
-    AppIcons.faceNeutral,
-    AppIcons.faceSlightlyFrowning,
-    AppIcons.faceExpressionless,
-    AppIcons.faceAngry,
-  ];
-  String _emojiIcon = AppIcons.faceSlightlySmiling;
   final _inputAreaKey = GlobalKey();
   double _inputAreaHeight = 0;
 
@@ -254,6 +245,21 @@ class _FernPageState extends State<FernPage> {
       imageQuality: 85,
     );
     if (images.isEmpty || !mounted) return;
+    await _sendPickedImages(images);
+  }
+
+  Future<void> _takePhoto() async {
+    if (_sending || _isRecording) return;
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
+    if (image == null || !mounted) return;
+    await _sendPickedImages([image]);
+  }
+
+  Future<void> _sendPickedImages(List<XFile> images) async {
     setState(() {
       _sending = true;
       _showAttachMenu = false;
@@ -288,21 +294,53 @@ class _FernPageState extends State<FernPage> {
     }
   }
 
-  void _toggleAttachMenu() {
-    if (!_showAttachMenu) {
-      _emojiIcon = _emojiFaces[_random.nextInt(_emojiFaces.length)];
+  Future<void> _pickFile() async {
+    if (_sending || _isRecording) return;
+    final file = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (file == null || !mounted) return;
+    final path = file.path;
+    if (path == null) {
+      _showSnack('Could not read the selected file.');
+      return;
     }
+    setState(() {
+      _sending = true;
+      _showAttachMenu = false;
+    });
+    try {
+      final dir = await _mediaDir();
+      final name = file.name.isNotEmpty ? file.name : 'document.pdf';
+      final dest = '$dir/fern_${DateTime.now().microsecondsSinceEpoch}_$name';
+      final bytes = await readMediaFile(path);
+      await writeMediaFile(dest, bytes);
+      setState(() {
+        _messages = [
+          ..._messages,
+          FernMessage(
+            role: 'user',
+            content: '',
+            sentAt: DateTime.now(),
+            kind: 'file',
+            mediaPath: dest,
+            fileName: name,
+          ),
+        ];
+      });
+      _persist();
+      _scrollToBottom();
+      await _acknowledgeMedia('file');
+    } catch (error) {
+      _showSnack('File could not be sent: $error');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _toggleAttachMenu() {
     setState(() => _showAttachMenu = !_showAttachMenu);
-  }
-
-  void _pickEmoji() {
-    setState(() => _showAttachMenu = false);
-    _showSnack('Emojis are coming soon.');
-  }
-
-  void _pickSticker() {
-    setState(() => _showAttachMenu = false);
-    _showSnack('Stickers are coming soon.');
   }
 
   Future<void> _toggleRecording() async {
@@ -410,9 +448,14 @@ class _FernPageState extends State<FernPage> {
   }
 
   Future<void> _acknowledgeMedia(String kind) async {
-    final reply = kind == 'audio'
-        ? "I can only read text, so I can't hear voice messages. Send me a text and I'll answer."
-        : "I can only read text, so I can't see images. Tell me what it says.";
+    final reply = switch (kind) {
+      'audio' =>
+        "I can only read text, so I can't hear voice messages. Send me a text and I'll answer.",
+      'file' =>
+        "I can only read text, so I can't open files. Tell me what it says.",
+      _ =>
+        "I can only read text, so I can't see images. Tell me what it says.",
+    };
     setState(() {
       _messages = [
         ..._messages,
@@ -478,9 +521,8 @@ class _FernPageState extends State<FernPage> {
               right: 16,
               bottom: _inputAreaHeight + 8,
               child: _AttachMenu(
-                emojiIcon: _emojiIcon,
-                onEmoji: _pickEmoji,
-                onSticker: _pickSticker,
+                onCamera: _takePhoto,
+                onFile: _pickFile,
                 onGallery: _sendImages,
               ),
             ),
@@ -737,15 +779,13 @@ class _FernTextInputBar extends StatelessWidget {
 
 class _AttachMenu extends StatelessWidget {
   const _AttachMenu({
-    required this.emojiIcon,
-    required this.onEmoji,
-    required this.onSticker,
+    required this.onCamera,
+    required this.onFile,
     required this.onGallery,
   });
 
-  final String emojiIcon;
-  final VoidCallback onEmoji;
-  final VoidCallback onSticker;
+  final VoidCallback onCamera;
+  final VoidCallback onFile;
   final VoidCallback onGallery;
 
   @override
@@ -763,17 +803,17 @@ class _AttachMenu extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _AttachOption(
-              icon: emojiIcon,
-              label: 'Emoji',
+              icon: AppIcons.camera,
+              label: 'Camera',
               color: primary,
-              onTap: onEmoji,
+              onTap: onCamera,
             ),
             const SizedBox(width: 4),
             _AttachOption(
-              icon: AppIcons.sticker,
-              label: 'Sticker',
+              icon: AppIcons.file,
+              label: 'File',
               color: primary,
-              onTap: onSticker,
+              onTap: onFile,
             ),
             const SizedBox(width: 4),
             _AttachOption(
@@ -967,6 +1007,14 @@ class _FernBubble extends StatelessWidget {
             isMine: isMine,
           ),
         );
+      case 'file':
+        return Align(
+          alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+          child: _FernFileBubble(
+            fileName: message.fileName ?? 'File',
+            isMine: isMine,
+          ),
+        );
       default:
         return Align(
           alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
@@ -989,6 +1037,43 @@ class _FernBubble extends StatelessWidget {
           ),
         );
     }
+  }
+}
+
+class _FernFileBubble extends StatelessWidget {
+  const _FernFileBubble({required this.fileName, required this.isMine});
+
+  final String fileName;
+  final bool isMine;
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = isMine ? Colors.white : const Color(0xFF1A1A1A);
+    final bubbleColor = isMine ? Colors.black : const Color(0xFFF2F2F2);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      constraints: const BoxConstraints(maxWidth: 300),
+      decoration: BoxDecoration(
+        color: bubbleColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppIcon(AppIcons.file, color: textColor, size: 20),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              fileName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: textColor, fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

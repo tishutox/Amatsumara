@@ -14,6 +14,7 @@ abstract final class AppIcons {
   static const cakeSlice = 'cake-slice';
   static const calendar = 'calendar';
   static const calendarRange = 'calendar-range';
+  static const camera = 'camera';
   static const check = 'check';
   static const chevronDown = 'chevron-down';
   static const chevronLeft = 'chevron-left';
@@ -33,6 +34,7 @@ abstract final class AppIcons {
   static const faceNeutral = 'face-neutral';
   static const faceSlightlyFrowning = 'face-slightly-frowning';
   static const faceSlightlySmiling = 'face-slightly-smiling';
+  static const file = 'file';
   static const fingerprintPattern = 'fingerprint-pattern';
   static const headphones = 'headphones';
   static const headphoneOff = 'headphone-off';

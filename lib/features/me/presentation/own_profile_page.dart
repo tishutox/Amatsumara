@@ -89,9 +89,7 @@ class OwnProfilePage extends StatelessWidget {
 
   Future<void> _copyProfileLink(BuildContext context, String username) async {
     await Clipboard.setData(
-      ClipboardData(
-        text: 'https://tishutox.github.io/Amatsumara/app/u/$username',
-      ),
+      ClipboardData(text: 'lumiiquest://u/$username'),
     );
     if (context.mounted) {
       ScaffoldMessenger.of(

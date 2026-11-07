@@ -14,20 +14,24 @@ class FernMessage {
     this.kind = 'text',
     this.mediaPath,
     this.mediaDuration,
+    this.fileName,
   });
 
   final String role; // 'user' or 'assistant'
   final String content;
   final DateTime sentAt;
 
-  /// 'text', 'image', or 'audio'.
+  /// 'text', 'image', 'audio', or 'file'.
   final String kind;
 
-  /// Local file path for 'image' and 'audio' kinds.
+  /// Local file path for 'image', 'audio', and 'file' kinds.
   final String? mediaPath;
 
   /// Playback duration in seconds for 'audio' kind.
   final double? mediaDuration;
+
+  /// Display name for 'file' kind.
+  final String? fileName;
 
   bool get isMedia => kind != 'text';
 
@@ -38,6 +42,7 @@ class FernMessage {
     'kind': kind,
     'mediaPath': mediaPath,
     'mediaDuration': mediaDuration,
+    'fileName': fileName,
   };
 
   factory FernMessage.fromJson(Map<String, dynamic> json) => FernMessage(
@@ -48,6 +53,7 @@ class FernMessage {
     kind: json['kind'] as String? ?? 'text',
     mediaPath: json['mediaPath'] as String?,
     mediaDuration: (json['mediaDuration'] as num?)?.toDouble(),
+    fileName: json['fileName'] as String?,
   );
 }
 

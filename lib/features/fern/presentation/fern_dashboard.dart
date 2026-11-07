@@ -50,6 +50,63 @@ class _FernDashboardState extends State<FernDashboard> {
     return value is String && value.isNotEmpty ? value : null;
   }
 
+  String _timeGroup(DateTime updatedAt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(updatedAt.year, updatedAt.month, updatedAt.day);
+    final days = today.difference(date).inDays;
+    if (days <= 0) return 'Today';
+    if (days < 7) return 'Last week';
+    if (days < 30) return 'Last month';
+    if (days < 365) return 'Last year';
+    return 'An eternity ago';
+  }
+
+  List<Widget> _buildChatListItems(List<FernConversation> conversations) {
+    final items = <Widget>[];
+    String? currentGroup;
+    for (final conversation in conversations) {
+      final group = _timeGroup(conversation.updatedAt);
+      if (group != currentGroup) {
+        currentGroup = group;
+        items.add(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              group,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF8E8E93),
+              ),
+            ),
+          ),
+        );
+      }
+      final selected = conversation.id == _activeId;
+      items.add(
+        ListTile(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          tileColor: selected
+              ? const Color(0xFFE4E4E8)
+              : Colors.transparent,
+          title: Text(
+            conversation.title.isEmpty ? 'New chat' : conversation.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          onTap: () => _openConversation(conversation.id),
+        ),
+      );
+    }
+    return items;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -191,33 +248,9 @@ class _FernDashboardState extends State<FernDashboard> {
                         style: TextStyle(color: Color(0xFF8E8E93)),
                       ),
                     )
-                  : ListView.builder(
+                  : ListView(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: conversations.length,
-                      itemBuilder: (context, index) {
-                        final conversation = conversations[index];
-                        final selected = conversation.id == _activeId;
-                        return ListTile(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          tileColor: selected
-                              ? const Color(0xFFE4E4E8)
-                              : Colors.transparent,
-                          title: Text(
-                            conversation.title.isEmpty
-                                ? 'New chat'
-                                : conversation.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onTap: () => _openConversation(conversation.id),
-                        );
-                      },
+                      children: _buildChatListItems(conversations),
                     ),
             ),
             Padding(
