@@ -5,7 +5,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lumii_quest/core/icons/app_icons.dart';
 import 'package:lumii_quest/features/fern/data/fern_repository.dart';
@@ -21,7 +20,18 @@ const Color fernLilac = Color(0xFF8B5CF6);
 /// Messages are stored on-device (not in the database) and replies come from
 /// the Ollama cloud API.
 class FernPage extends StatefulWidget {
-  const FernPage({super.key});
+  const FernPage({
+    super.key,
+    required this.conversation,
+    required this.onChanged,
+    required this.onToggleSidebar,
+    required this.onNewChat,
+  });
+
+  final FernConversation conversation;
+  final ValueChanged<FernConversation> onChanged;
+  final VoidCallback onToggleSidebar;
+  final VoidCallback onNewChat;
 
   @override
   State<FernPage> createState() => _FernPageState();
@@ -32,7 +42,7 @@ class _FernPageState extends State<FernPage> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _recorder = AudioRecorder();
-  List<FernMessage> _messages = [];
+  late List<FernMessage> _messages;
   bool _sending = false;
   bool _downloadingModel = false;
   double? _downloadProgress;
@@ -51,7 +61,6 @@ class _FernPageState extends State<FernPage> {
     AppIcons.faceAngry,
   ];
   String _emojiIcon = AppIcons.faceSlightlySmiling;
-  final _scaffoldKey = GlobalKey<ScaffoldState>();
   final _inputAreaKey = GlobalKey();
   double _inputAreaHeight = 0;
 
@@ -63,8 +72,8 @@ class _FernPageState extends State<FernPage> {
   @override
   void initState() {
     super.initState();
+    _messages = List.of(widget.conversation.messages);
     _controller.addListener(_handleTextChanged);
-    unawaited(_load());
     unawaited(_checkLocalModel());
     unawaited(_checkCrashLog());
   }
@@ -77,14 +86,6 @@ class _FernPageState extends State<FernPage> {
     _amplitudeSub?.cancel();
     unawaited(_recorder.dispose());
     super.dispose();
-  }
-
-  Future<void> _load() async {
-    final messages = await _repository.loadMessages();
-    if (mounted) {
-      setState(() => _messages = messages);
-      _scrollToBottom();
-    }
   }
 
   void _scrollToBottom() {
@@ -102,11 +103,6 @@ class _FernPageState extends State<FernPage> {
     }
   }
 
-  void _openDrawerRoute(String location) {
-    _scaffoldKey.currentState?.closeDrawer();
-    context.push(location);
-  }
-
   void _handleTextChanged() {
     if (!mounted) return;
     if (_controller.text.trim().isNotEmpty && _showAttachMenu) {
@@ -114,6 +110,16 @@ class _FernPageState extends State<FernPage> {
     } else {
       setState(() {});
     }
+  }
+
+  void _persist({String? title}) {
+    widget.onChanged(
+      widget.conversation.copyWith(
+        title: title,
+        messages: List.of(_messages),
+        updatedAt: DateTime.now(),
+      ),
+    );
   }
 
   Future<void> _checkLocalModel() async {
@@ -187,6 +193,7 @@ class _FernPageState extends State<FernPage> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
+    final shouldTitle = _messages.isEmpty && widget.conversation.title.isEmpty;
     _controller.clear();
 
     final history = List<FernMessage>.of(_messages);
@@ -208,7 +215,14 @@ class _FernPageState extends State<FernPage> {
           FernMessage(role: 'assistant', content: reply, sentAt: DateTime.now()),
         ];
       });
-      await _repository.saveMessages(_messages);
+      if (shouldTitle) {
+        final title = await _repository.generateTitle(text);
+        if (mounted && title.isNotEmpty) {
+          _persist(title: title);
+          return;
+        }
+      }
+      _persist();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -221,7 +235,7 @@ class _FernPageState extends State<FernPage> {
           ),
         ];
       });
-      await _repository.saveMessages(_messages);
+      _persist();
     } finally {
       if (mounted) setState(() => _sending = false);
       _scrollToBottom();
@@ -264,7 +278,7 @@ class _FernPageState extends State<FernPage> {
         );
       }
       setState(() => _messages = [..._messages, ...messages]);
-      await _repository.saveMessages(_messages);
+      _persist();
       _scrollToBottom();
       await _acknowledgeMedia('image');
     } catch (error) {
@@ -385,7 +399,7 @@ class _FernPageState extends State<FernPage> {
           ),
         ];
       });
-      await _repository.saveMessages(_messages);
+      _persist();
       _scrollToBottom();
       await _acknowledgeMedia('audio');
     } catch (error) {
@@ -405,7 +419,7 @@ class _FernPageState extends State<FernPage> {
         FernMessage(role: 'assistant', content: reply, sentAt: DateTime.now()),
       ];
     });
-    await _repository.saveMessages(_messages);
+    _persist();
     _scrollToBottom();
   }
 
@@ -413,33 +427,20 @@ class _FernPageState extends State<FernPage> {
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) => _measureInputArea());
     return Scaffold(
-      key: _scaffoldKey,
       appBar: AppBar(
         leading: IconButton(
           tooltip: 'Menu',
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          onPressed: widget.onToggleSidebar,
           icon: const AppIcon(AppIcons.equal),
         ),
-        surfaceTintColor: Colors.transparent,
-      ),
-      drawer: Drawer(
-        child: SafeArea(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              ListTile(
-                leading: const AppIcon(AppIcons.bolt),
-                title: const Text('Settings'),
-                onTap: () => _openDrawerRoute('/settings'),
-              ),
-              ListTile(
-                leading: const AppIcon(AppIcons.pencilRuler),
-                title: const Text('Edit profile'),
-                onTap: () => _openDrawerRoute('/edit-profile'),
-              ),
-            ],
+        actions: [
+          IconButton(
+            tooltip: 'New chat',
+            onPressed: widget.onNewChat,
+            icon: const AppIcon(AppIcons.messageCirclePlus),
           ),
-        ),
+        ],
+        surfaceTintColor: Colors.transparent,
       ),
       body: Stack(
         clipBehavior: Clip.none,

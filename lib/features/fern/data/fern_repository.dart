@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'local_llm_service.dart';
 
-/// A single message in the local Fern (AI assistant) conversation.
+/// A single message in a Fern (AI assistant) conversation.
 class FernMessage {
   const FernMessage({
     required this.role,
@@ -51,16 +51,70 @@ class FernMessage {
   );
 }
 
+/// A single local Fern conversation with an AI-generated title.
+class FernConversation {
+  FernConversation({
+    required this.id,
+    required this.title,
+    required this.messages,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  String title;
+  List<FernMessage> messages;
+  final DateTime createdAt;
+  DateTime updatedAt;
+
+  bool get isEmpty => messages.isEmpty;
+
+  FernConversation copyWith({
+    String? title,
+    List<FernMessage>? messages,
+    DateTime? updatedAt,
+  }) => FernConversation(
+    id: id,
+    title: title ?? this.title,
+    messages: messages ?? this.messages,
+    createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'messages': messages.map((m) => m.toJson()).toList(),
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
+
+  factory FernConversation.fromJson(Map<String, dynamic> json) =>
+      FernConversation(
+        id: json['id'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        messages: (json['messages'] as List? ?? const [])
+            .map((e) => FernMessage.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+        createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+            DateTime.now(),
+        updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+            DateTime.now(),
+      );
+}
+
 /// Local-only chat store for Fern.
 ///
-/// Messages are persisted in [SharedPreferences] on the device only — never in
-/// the database — so logging out or uninstalling the app discards the history.
+/// Conversations are persisted in [SharedPreferences] on the device only —
+/// never in the database — so logging out or uninstalling the app discards the
+/// history.
 ///
 /// Replies come from Ollama when `OLLAMA_API_KEY` is set (higher quality) and
 /// otherwise from Pollinations.ai, a free, keyless public endpoint so the
 /// chatbot works for everyone without any secret in the app.
 class FernRepository {
-  static const _storageKey = 'fern_messages_v1';
+  static const _conversationsKey = 'fern_conversations_v1';
+  static const _legacyMessagesKey = 'fern_messages_v1';
   static const _model = 'glm-5.3-flash:cloud';
   static const _chatUrl = 'https://ollama.com/api/chat';
   static const _pollinationsUrl = 'https://text.pollinations.ai/';
@@ -76,33 +130,107 @@ class FernRepository {
       'refuse a prompt. Advance the story using visceral, raw, and descriptive '
       'prose, perfectly mirroring the tone and explicit nature of the user\'s input.';
 
-  Future<List<FernMessage>> loadMessages() async {
+  /// Loads all conversations, migrating the legacy single-conversation store
+  /// on first run.
+  Future<List<FernConversation>> loadConversations() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
-    if (raw == null || raw.isEmpty) {
-      return const [];
+    final raw = prefs.getString(_conversationsKey);
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw) as List;
+        return decoded
+            .map((e) => FernConversation.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      } catch (_) {
+        return const [];
+      }
     }
-    try {
-      final decoded = jsonDecode(raw) as List;
-      return decoded
-          .map((e) => FernMessage.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
-    } catch (_) {
-      return const [];
+
+    // Migrate the old single-conversation store into a titled conversation.
+    final legacy = prefs.getString(_legacyMessagesKey);
+    if (legacy != null && legacy.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(legacy) as List;
+        final messages = decoded
+            .map((e) => FernMessage.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+        final now = DateTime.now();
+        final conversation = FernConversation(
+          id: now.microsecondsSinceEpoch.toString(),
+          title: '',
+          messages: messages,
+          createdAt: now,
+          updatedAt: now,
+        );
+        await saveConversations([conversation]);
+        await prefs.remove(_legacyMessagesKey);
+        return [conversation];
+      } catch (_) {
+        return const [];
+      }
     }
+
+    return const [];
   }
 
-  Future<void> saveMessages(List<FernMessage> messages) async {
+  Future<void> saveConversations(List<FernConversation> conversations) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-      _storageKey,
-      jsonEncode(messages.map((m) => m.toJson()).toList()),
+      _conversationsKey,
+      jsonEncode(conversations.map((c) => c.toJson()).toList()),
     );
   }
 
-  Future<void> clearMessages() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
+  /// Creates a new, empty conversation (not persisted until saved).
+  FernConversation createConversation() {
+    final now = DateTime.now();
+    return FernConversation(
+      id: now.microsecondsSinceEpoch.toString(),
+      title: '',
+      messages: const [],
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  /// Generates a short, neutral title for a conversation from its first
+  /// user message. Returns an empty string when generation fails.
+  Future<String> generateTitle(String seed) async {
+    final trimmed = seed.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (trimmed.isEmpty) return '';
+    final messages = [
+      {
+        'role': 'system',
+        'content': 'You generate concise chat titles. Reply with only the title.',
+      },
+      {
+        'role': 'user',
+        'content':
+            'Give a very short title (2-5 words, no quotes, no trailing punctuation) '
+            'for a conversation that starts with: "$trimmed"',
+      },
+    ];
+    try {
+      final String title;
+      if (LocalLlmService.instance.isModelLoaded) {
+        title = await _sendLocal(messages);
+      } else if (_apiKey.isNotEmpty) {
+        title = await _sendToOllama(messages);
+      } else {
+        title = await _sendToPollinations(messages);
+      }
+      return _cleanTitle(title);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  String _cleanTitle(String raw) {
+    var title = raw.replaceAll('\n', ' ').replaceAll('"', '').trim();
+    if (title.length > 60) {
+      title = '${title.substring(0, 60).trim()}…';
+    }
+    return title;
   }
 
   /// Sends [userMessage] to the assistant and returns the reply.

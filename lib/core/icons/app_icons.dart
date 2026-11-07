@@ -54,6 +54,7 @@ abstract final class AppIcons {
   static const logOut = 'log-out';
   static const mail = 'mail';
   static const messageCircle = 'message-circle';
+  static const messageCirclePlus = 'message-circle-plus';
   static const messageSquareText = 'message-square-text';
   static const messagesCircle = 'messages-circle';
   static const mic = 'mic';
@@ -67,6 +68,7 @@ abstract final class AppIcons {
   static const refreshCcw = 'refresh-ccw';
   static const reply = 'reply';
   static const save = 'save';
+  static const search = 'search';
   static const send = 'send';
   static const sendHorizontal = 'send-horizontal';
   static const sticker = 'sticker';

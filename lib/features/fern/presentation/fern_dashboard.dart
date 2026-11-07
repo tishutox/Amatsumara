@@ -1,0 +1,263 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lumii_quest/core/icons/app_icons.dart';
+import 'package:lumii_quest/features/fern/data/fern_repository.dart';
+import 'package:lumii_quest/features/fern/presentation/fern_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+/// Signed-in root: a light-gray dashboard (sidebar) with the active Fern chat
+/// shifted to its right.
+class FernDashboard extends StatefulWidget {
+  const FernDashboard({super.key});
+
+  @override
+  State<FernDashboard> createState() => _FernDashboardState();
+}
+
+class _FernDashboardState extends State<FernDashboard> {
+  static const Color _sidebarColor = Color(0xFFF6F6F6);
+  static const Color _searchFill = Color(0xFFEFEFF0);
+
+  final _repository = FernRepository();
+  final _searchController = TextEditingController();
+  List<FernConversation> _conversations = [];
+  String? _activeId;
+  bool _sidebarOpen = false;
+  bool _loaded = false;
+
+  FernConversation? get _active {
+    if (_activeId == null) return null;
+    for (final c in _conversations) {
+      if (c.id == _activeId) return c;
+    }
+    return null;
+  }
+
+  List<FernConversation> get _filteredConversations {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) return _conversations;
+    return _conversations.where((c) {
+      if (c.title.toLowerCase().contains(query)) return true;
+      return c.messages.any((m) => m.content.toLowerCase().contains(query));
+    }).toList();
+  }
+
+  String? get _avatarUrl {
+    final value =
+        Supabase.instance.client.auth.currentUser?.userMetadata?['avatar_url'];
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+    unawaited(_load());
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _load() async {
+    var conversations = await _repository.loadConversations();
+    if (conversations.isEmpty) {
+      conversations = [_repository.createConversation()];
+    }
+    if (!mounted) return;
+    setState(() {
+      _conversations = conversations;
+      _loaded = true;
+      _activeId = conversations.first.id;
+    });
+  }
+
+  void _sortConversations() {
+    _conversations.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  void _onConversationChanged(FernConversation updated) {
+    setState(() {
+      final index = _conversations.indexWhere((c) => c.id == updated.id);
+      if (index == -1) {
+        _conversations.insert(0, updated);
+      } else {
+        _conversations[index] = updated;
+      }
+      _sortConversations();
+    });
+    unawaited(_repository.saveConversations(_conversations));
+  }
+
+  void _openConversation(String id) {
+    setState(() {
+      _activeId = id;
+      _sidebarOpen = false;
+    });
+  }
+
+  void _newChat() {
+    final active = _active;
+    if (active != null && active.isEmpty) {
+      setState(() => _sidebarOpen = false);
+      return;
+    }
+    final conversation = _repository.createConversation();
+    setState(() {
+      _conversations.insert(0, conversation);
+      _activeId = conversation.id;
+      _sidebarOpen = false;
+    });
+    unawaited(_repository.saveConversations(_conversations));
+  }
+
+  void _toggleSidebar() {
+    setState(() => _sidebarOpen = !_sidebarOpen);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final active = _active;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final sidebarWidth = (screenWidth * 0.86).clamp(0.0, 340.0).toDouble();
+
+    return Scaffold(
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_sidebarOpen) _buildSidebar(context, sidebarWidth),
+          Expanded(
+            child: active == null
+                ? const SizedBox.shrink()
+                : FernPage(
+                    key: ValueKey(active.id),
+                    conversation: active,
+                    onChanged: _onConversationChanged,
+                    onToggleSidebar: _toggleSidebar,
+                    onNewChat: _newChat,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebar(BuildContext context, double width) {
+    final conversations = _filteredConversations;
+    return Container(
+      width: width,
+      color: _sidebarColor,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search chat content...',
+                  prefixIcon: const AppIcon(AppIcons.search),
+                  isDense: true,
+                  filled: true,
+                  fillColor: _searchFill,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: conversations.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No chats yet',
+                        style: TextStyle(color: Color(0xFF8E8E93)),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      itemCount: conversations.length,
+                      itemBuilder: (context, index) {
+                        final conversation = conversations[index];
+                        final selected = conversation.id == _activeId;
+                        return ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          tileColor: selected
+                              ? const Color(0xFFE4E4E8)
+                              : Colors.transparent,
+                          title: Text(
+                            conversation.title.isEmpty
+                                ? 'New chat'
+                                : conversation.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF1A1A1A),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          onTap: () => _openConversation(conversation.id),
+                        );
+                      },
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 12),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => context.push('/settings'),
+                    child: const Text(
+                      'Settings',
+                      style: TextStyle(
+                        color: Color(0xFF1A1A1A),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  _buildAvatar(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar() {
+    final avatarUrl = _avatarUrl;
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: () => context.push('/own-profile'),
+      child: CircleAvatar(
+        radius: 16,
+        backgroundColor: const Color(0xFFE4E4E8),
+        backgroundImage: avatarUrl == null ? null : NetworkImage(avatarUrl),
+        child: avatarUrl == null
+            ? const AppIcon(AppIcons.circleUserRound, size: 18)
+            : null,
+      ),
+    );
+  }
+}

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:lumii_quest/features/fern/presentation/fern_page.dart';
+import 'package:lumii_quest/features/fern/presentation/fern_dashboard.dart';
 import 'package:lumii_quest/features/me/presentation/me_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -38,6 +38,6 @@ class _AppShellState extends State<AppShell> {
     if (Supabase.instance.client.auth.currentUser == null) {
       return const MePage();
     }
-    return const FernPage();
+    return const FernDashboard();
   }
 }
