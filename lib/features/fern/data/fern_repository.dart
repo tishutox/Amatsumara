@@ -204,6 +204,11 @@ class FernRepository {
   Future<String> generateTitle(String seed) async {
     final trimmed = seed.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (trimmed.isEmpty) return '';
+    // Bound the seed so the title prompt stays tiny and cannot exceed the
+    // local model's batch window (an oversized batch aborts llama.cpp).
+    final bounded = trimmed.length > 300
+        ? '${trimmed.substring(0, 300)}…'
+        : trimmed;
     final messages = [
       {
         'role': 'system',
@@ -213,15 +218,14 @@ class FernRepository {
         'role': 'user',
         'content':
             'Give a very short title (2-5 words, no quotes, no trailing punctuation) '
-            'for a conversation that starts with: "$trimmed"',
+            'for a conversation that starts with: "$bounded"',
       },
     ];
     try {
-      // Titles go through the cloud, not the local model: the on-device model
-      // is CPU-only and a second generate() right after a reply can abort
-      // llama.cpp (ggml_abort in llama_decode, signal 6).
       final String title;
-      if (_apiKey.isNotEmpty) {
+      if (LocalLlmService.instance.isModelLoaded) {
+        title = await _sendLocal(messages);
+      } else if (_apiKey.isNotEmpty) {
         title = await _sendToOllama(messages);
       } else {
         title = await _sendToPollinations(messages);

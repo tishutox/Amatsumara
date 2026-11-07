@@ -194,21 +194,32 @@ class _FernDashboardState extends State<FernDashboard> {
     final sidebarWidth = (screenWidth * 0.86).clamp(0.0, 340.0).toDouble();
 
     return Scaffold(
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
         children: [
-          if (_sidebarOpen) _buildSidebar(context, sidebarWidth),
-          Expanded(
-            child: active == null
-                ? const SizedBox.shrink()
-                : FernPage(
-                    key: ValueKey(active.id),
-                    conversation: active,
-                    onChanged: _onConversationChanged,
-                    onToggleSidebar: _toggleSidebar,
-                    onNewChat: _newChat,
-                  ),
-          ),
+          active == null
+              ? const SizedBox.shrink()
+              : FernPage(
+                  key: ValueKey(active.id),
+                  conversation: active,
+                  onChanged: _onConversationChanged,
+                  onToggleSidebar: _toggleSidebar,
+                  onNewChat: _newChat,
+                ),
+          if (_sidebarOpen) ...[
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _toggleSidebar,
+                child: ColoredBox(color: Colors.black.withValues(alpha: 0.3)),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: sidebarWidth,
+              child: _buildSidebar(context, sidebarWidth),
+            ),
+          ],
         ],
       ),
     );
@@ -229,7 +240,11 @@ class _FernDashboardState extends State<FernDashboard> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Search chat content...',
-                  prefixIcon: const AppIcon(AppIcons.search),
+                  prefixIcon: const AppIcon(AppIcons.search, size: 18),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                   isDense: true,
                   filled: true,
                   fillColor: _searchFill,
