@@ -249,17 +249,34 @@ class FernRepository {
     List<FernMessage> history,
     String userMessage,
   ) async {
-    // Bound the prompt so it never exceeds the local model's batch/context
-    // window: an oversized batch aborts llama.cpp with ggml_abort in
-    // llama_decode (signal 6 native crash).
+    // Bound the prompt so llama.cpp never aborts on an oversized batch
+    // (ggml_abort in llama_decode). Keep the most recent history and a
+    // bounded current message.
+    const maxHistoryChars = 3500;
+    const maxUserChars = 2500;
+
     final textHistory = history.where((m) => !m.isMedia).toList();
-    final recent = textHistory.length > 16
-        ? textHistory.sublist(textHistory.length - 16)
-        : textHistory;
+    final boundedHistory = <Map<String, String>>[];
+    var used = 0;
+    for (final m in textHistory.reversed) {
+      final remaining = maxHistoryChars - used;
+      if (remaining <= 0) break;
+      final content = m.content;
+      final bounded = content.length > remaining
+          ? content.substring(0, remaining)
+          : content;
+      boundedHistory.add({'role': m.role, 'content': bounded});
+      used += bounded.length;
+    }
+
+    final boundedUser = userMessage.length > maxUserChars
+        ? '${userMessage.substring(0, maxUserChars)}…'
+        : userMessage;
+
     final messages = [
       {'role': 'system', 'content': _systemPrompt},
-      ...recent.map((m) => {'role': m.role, 'content': m.content}),
-      {'role': 'user', 'content': userMessage},
+      ...boundedHistory.reversed,
+      {'role': 'user', 'content': boundedUser},
     ];
 
     if (LocalLlmService.instance.isModelLoaded) {
