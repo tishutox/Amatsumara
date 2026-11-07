@@ -1,4 +1,4 @@
-# Lumii Quest
+# Amatsumara
 
 Cross-platform foundation for an Amino-inspired community hub.
 

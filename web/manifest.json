@@ -1,11 +1,11 @@
 {
-    "name": "Lumii Quest",
-    "short_name": "Lumii Quest",
+    "name": "Amatsumara",
+    "short_name": "Amatsumara",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#5860c3",
-    "description": "Lumii Quest community app.",
+    "description": "Amatsumara community app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

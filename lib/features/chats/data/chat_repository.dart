@@ -77,7 +77,7 @@ class ChatPreview {
       conversationId: row['conversation_id'] as String,
       friendId: row['friend_id'] as String,
       username: row['username'] as String? ?? '',
-      displayName: row['display_name'] as String? ?? 'Lumii Quest member',
+      displayName: row['display_name'] as String? ?? 'Amatsumara member',
       avatarUrl: row['avatar_url'] as String?,
       lastMessageAt: DateTime.tryParse(row['last_message_at'] as String? ?? ''),
     );

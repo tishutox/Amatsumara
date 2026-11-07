@@ -179,7 +179,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return _ProfileHeader(
       displayName:
-          _profile?.displayName ?? metadataDisplayName ?? 'Lumii Quest member',
+          _profile?.displayName ?? metadataDisplayName ?? 'Amatsumara member',
       email: user.email ?? '',
       avatarUrl: _profile?.avatarUrl ?? metadataAvatar,
       bannerUrl: _profile?.bannerUrl,

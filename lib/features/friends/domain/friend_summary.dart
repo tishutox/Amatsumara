@@ -17,7 +17,7 @@ class FriendSummary {
     return FriendSummary(
       id: row['id'] as String,
       username: row['username'] as String? ?? '',
-      displayName: row['display_name'] as String? ?? 'Lumii Quest member',
+      displayName: row['display_name'] as String? ?? 'Amatsumara member',
       avatarUrl: row['avatar_url'] as String?,
       friendSince:
           DateTime.tryParse(row['friend_since'] as String? ?? '') ??
